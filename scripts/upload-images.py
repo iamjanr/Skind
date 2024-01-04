@@ -170,7 +170,6 @@ def check_repository():
                 elif options.provider == "azure":
                     try:
                         # Check if repository exists
-                        #response = get_default_cli().invoke(['acr', 'repository', 'show', '--name', 'eosregistry', '--repository', match.group()])
                         azure_registry_name = azure_registry.split(".")[0]
                         response = get_default_cli().invoke(['acr', 'repository', 'show', '--name', azure_registry_name, '--repository', match.group()])
                         print("Repository exists: " + match.group())
