@@ -66,3 +66,4 @@ ec2 = session.client('ec2')
         # Install gcloud client
             # https://cloud.google.com/sdk/docs/install
     # Tested on: keos-installer:1.0.4
+    # Example: python3 upload-images.py  -w /home/jnovoa/org/Work/workspace/gcp/unmanaged/0.3.6 -p gcp -k 1.0.4 -v 123456
