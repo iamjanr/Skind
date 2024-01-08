@@ -23,7 +23,6 @@ aws_registry = "963353511234.dkr.ecr.eu-west-1.amazonaws.com"
 azure_registry = "eosregistry.azurecr.io"
 gcp_registry = "europe-docker.pkg.dev/clusterapi-369611"
 bind_mount_var = os.environ['HOME'] + "/get-keos-docker-images-list.yml"
-print("bind_mount_var: " + bind_mount_var)
 
 # Check parameters
 def check_parameters():
