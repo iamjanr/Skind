@@ -12,7 +12,6 @@ import subprocess
 import sys
 import boto3
 import re
-import parser
 import argparse
 from azure.cli.core import get_default_cli
 
