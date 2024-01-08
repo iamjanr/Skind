@@ -75,7 +75,7 @@ def remove_keos_docker_images_txt():
         print("Removing file ...")
         print("****")
 
-# Run docker image (Remove bind mount ( and bind_mount_var) when new keos image is out, now 1.1.0-M1 do not have get-keos-docker-images-list.yml fixed)
+# Run docker image (Remove bind mount ( and bind_mount_var) when new keos image is out, now 1.0.4 do not have get-keos-docker-images-list.yml fixed)
 # https://github.com/Stratio/keos-installer/pull/2626/files
 def run_docker_image():
         # Run container in background
