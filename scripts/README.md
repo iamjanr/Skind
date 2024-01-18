@@ -42,19 +42,6 @@ ec2 = session.client('ec2')
 ## upload-images.py
 
 ### Pre-requisites and considerations
-    # VPN connection to Stratio network (Sometimes queries to providers fail, just try again)
-    # Do not use Chartmuseum
-    # Check keos.yaml and secrets.yml if needed
-        #Example:
-        # keos.yaml
-            # docker_registry: 963353511234.dkr.ecr.eu-west-1.amazonaws.com
-            # helm_repository: https://repo.stratio.com/repository/helm-14.0-devel
-        # secrets.yml
-            # helm_repository: https://repo.stratio.com/repository/helm-14.0-devel
-    # Modify aws_registry, azure_registry and gcp_registry variables if needed, but take care on splits
-    # Run docker image (Remove bind mount ( and bind_mount_var) when new keos image is out with get-keos-docker-images-list.yml fixed)
-        # Copy get-keos-docker-images-list.yml on your home directory
-        # https://github.com/Stratio/keos-installer/pull/2626/files
     # Local requirements:
         # Python3
         # Install boto3
@@ -65,5 +52,22 @@ ec2 = session.client('ec2')
             # pip3 install azure-cli
         # Install gcloud client
             # https://cloud.google.com/sdk/docs/install
-    # Tested on: keos-installer:1.0.4
+    # VPN connection to Stratio network (Sometimes queries to providers fail, just try again).
+    # Do not use Chartmuseum.
+    # Check keos.yaml and secrets.yml if needed.
+        #Example:
+        # keos.yaml
+            # docker_registry: 963353511234.dkr.ecr.eu-west-1.amazonaws.com
+            # helm_repository: https://repo.stratio.com/repository/helm-14.0-devel
+        # secrets.yml
+            # helm_repository: https://repo.stratio.com/repository/helm-14.0-devel
+    # Modify aws_registry, azure_registry and gcp_registry variables if needed, but take care on splits
+
+### Usage
     # Example: python3 upload-images.py  -w /home/jnovoa/org/Work/workspace/gcp/unmanaged/0.3.6 -p gcp -k 1.0.4 -v 123456
+    # keos version 1.0.4:
+        # Copy get-keos-docker-images-list.yml on your home directory.
+    # keos version 1.1.0:
+        # Remove 'deploy_tigera_operator' property on keos.yaml.
+        # Do not copy get-keos-docker-images-list.yml on your home directory.
+        # Remove bind_mount_var (variable) and bind mount (volume) on docker run command.
