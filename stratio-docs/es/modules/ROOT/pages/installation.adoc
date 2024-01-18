@@ -20,7 +20,7 @@ Para asegurar las funcionalidades soportadas por el _control-plane_ gestionado d
 +
 Las https://docs.aws.amazon.com/eks/latest/userguide/eks-optimized-ami.html[AMI optimizadas para Amazon EKS] se crean sobre el sistema operativo Amazon Linux 2.
 +
-En el caso de los despliegues en AWS no gestionado, se deberá utilizar https://github.com/kubernetes-sigs/image-builder/tree/master/images/capi[_image builder_], una herramienta oficial que permite crear y disponibilizar imágenes para _Stratio KEOS_. Para mayor detalle en la construcción de las imágenes consulta la xref:operations-manual:image-builder:aws-image-builder.adoc[guía para AWS].
+En el caso de los despliegues en AWS no gestionado, se deberá utilizar https://github.com/kubernetes-sigs/image-builder/tree/master/images/capi[_image builder_], una herramienta oficial que permite crear y disponibilizar imágenes para _Stratio KEOS_. Para mayor detalle en la construcción de las imágenes consulta la xref:operations-manual:image-builder/aws-image-builder.adoc[guía para AWS].
 +
 El sistema operativo recomendado actualmente para este proveedor es Ubuntu 22.04.
 
@@ -38,7 +38,7 @@ Para los despliegues en Google Cloud Platform no gestionado se necesitarán prin
 
 * Sistemas operativos certificados
 +
-Para los entornos en GCP no gestionado se deberá utilizar https://github.com/kubernetes-sigs/image-builder/tree/master/images/capi[_image builder_], una herramienta oficial que permite crear y disponibilizar imágenes para _Stratio KEOS_. Para mayor detalle en la construcción de las imágenes consulta la xref:operations-manual:image-builder:gcp-image-builder.adoc[guía para GCP].
+Para los entornos en GCP no gestionado se deberá utilizar https://github.com/kubernetes-sigs/image-builder/tree/master/images/capi[_image builder_], una herramienta oficial que permite crear y disponibilizar imágenes para _Stratio KEOS_. Para mayor detalle en la construcción de las imágenes consulta la xref:operations-manual:image-builder/gcp-image-builder.adoc[guía para GCP].
 +
 El sistema operativo recomendado actualmente para este proveedor es Ubuntu 22.04.
 
@@ -54,7 +54,7 @@ Al igual que con otros proveedores soportados, el aprovisionamiento requiere una
 
 * Sistemas operativos certificados
 +
-Para los entornos en Azure se podrá utilizar https://github.com/kubernetes-sigs/image-builder/tree/master/images/capi[_image builder_], una herramienta oficial que permite crear y disponibilizar imágenes para _Stratio KEOS_. Para mayor detalle en la construcción de las imágenes ver la xref:operations-manual:image-builder:azure-image-builder.adoc[guía para Azure].
+Para los entornos en Azure se podrá utilizar https://github.com/kubernetes-sigs/image-builder/tree/master/images/capi[_image builder_], una herramienta oficial que permite crear y disponibilizar imágenes para _Stratio KEOS_. Para mayor detalle en la construcción de las imágenes ver la xref:operations-manual:image-builder/azure-image-builder.adoc[guía para Azure].
 +
 El sistema operativo recomendado actualmente para este proveedor es Ubuntu 22.04, siendo el que crea por defecto el _controller_ de este proveedor _cloud_.
 
@@ -500,6 +500,108 @@ spec:
     disktype: standard
   - name: eks-prod-medium-az
     quantity: 3
+    size: t3.medium
+    az: eu-west-1c
+----
+
+==== AWS no gestionado
+
+En este ejemplo se pueden ver las siguientes particularidades:
+
+* _Cluster_ en AWS con _control-plane_ no gestionado.
+* Kubernetes versión 1.26.x.
+* Uso de ECR como _Docker registry_ (no necesita credenciales).
+* Uso de VPC y _subnets_ personalizadas (creadas anteriormente). Este apartado es opcional.
+* Definición de una _StorageClass_ por defecto. Este apartado es opcional.
+* Grupos de nodos _worker_ con múltiples casuísticas:
+** Diferentes tipos de instancia.
+** Con clave SSH.
+** Con etiquetas de K8s.
+** Con rangos de autoescalado.
+** En una zona fija.
+** Con personalizaciones en el disco.
+** Con instancias tipo _spot_.
+** Casos de distribución en AZs: balanceado y desbalanceado.
+
+[source,yaml]
+----
+apiVersion: installer.stratio.com/v1beta1
+kind: KeosCluster
+metadata:
+  name: aws-prod
+spec:
+  infra_provider: aws
+  credentials:
+  aws:
+    region: eu-west-1
+    access_key: AKIAT4..
+    account_id: '3683675..'
+    secret_key: wq3/Vsc..
+  github_token: github_pat_11APW..
+  k8s_version: v1.26.7
+  region: eu-west-1
+  external_domain: domain.ext
+  networks:
+    vpc_id: vpc-02698..
+    subnets:
+      - subnet_id: subnet-0416d..
+      - subnet_id: subnet-0b2f8..
+      - subnet_id: subnet-0df75..
+      - subnet_id: subnet-88789..
+      - subnet_id: subnet-89785..
+      - subnet_id: subnet-84281..
+    pods_subnets:
+      - subnet_id: subnet-0416d..
+      - subnet_id: subnet-0b2f8..
+      - subnet_id: subnet-0df75..
+    pods_cidr: 100.64.0.0/16
+  docker_registries:
+  - url: AABBCC.dkr.ecr.eu-west-1.amazonaws.com/keos
+    auth_required: false
+    type: ecr
+    keos_registry: true
+  storageclass:
+  parameters:
+    type: gp3
+    fsType: ext4
+    encrypted: "true"
+    labels: "owner=stratio"
+  keos:
+  flavour: production
+  version: 1.0.2
+  control_plane:
+  managed: false
+  name: aws-prod-cp
+  size: m6i.xlarge
+  node_image: ami-0de933c15c9b49fb5
+  root_volume:
+    size: 50
+    type: gp3
+  worker_nodes:
+  - name: aws-prod-xlarge
+    quantity: 6
+    max_size: 18
+    min_size: 6
+    size: m6i.xlarge
+    node_image: ami-0de933c15c9b49fb5
+    labels:
+    disktype: standard
+    root_volume:
+    size: 50
+    type: gp3
+    encrypted: true
+    ssh_key: stg-key
+  - name: aws-prod-medium-spot
+    quantity: 4
+    node_image: ami-0de933c15c9b49fb5
+    zone_distribution: unbalanced
+    size: t3.medium
+    spot: true
+    labels:
+    disktype: standard
+  - name: aws-prod-medium-az
+    quantity: 3
+    node_image: ami-0de933c15c9b49fb5
     size: t3.medium
     az: eu-west-1c
 ----
