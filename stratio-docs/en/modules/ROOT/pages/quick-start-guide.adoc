@@ -94,6 +94,7 @@ Once the `.tgz` file of the _cloud-provisioner_ is downloaded, proceed to unzip 
 ----
 $ tar xvzf cloud-provisioner-*tar.gz
 $ sudo ./bin/cloud-provisioner create cluster --name <cluster_id> --descriptor cluster.yaml
+Vault Password:
 Creating temporary cluster "example-aws" ...
  ✓ Ensuring node image (kindest/node:v1.27.0) 🖼
  ✓ Building Stratio image (stratio-capi-image:v1.27.0) 📸
@@ -103,9 +104,9 @@ Creating temporary cluster "example-aws" ...
  ✓ Installing CNI 🔌
  ✓ Installing StorageClass 💾
  ✓ Installing CAPx 🎖️
- ✓ Generating workload cluster manifests 📝
  ✓ Generating secrets file 📝🗝️
  ✓ Installing keos cluster operator 💻
+ ✓ [CAPA] Ensuring IAM security 👮
  ✓ Creating the workload cluster 💥
  ✓ Saving the workload cluster kubeconfig 📝
  ✓ Installing cloud-provider in workload cluster ☁️
@@ -120,6 +121,7 @@ Creating temporary cluster "example-aws" ...
  ✓ Installing keos cluster operator in workload cluster 💻
  ✓ Creating cloud-provisioner Objects backup 🗄️
  ✓ Moving the management role 🗝️
+ ✓ Executing post-install steps 🎖️
  ✓ Generating the KEOS descriptor 📝
  ✓ Cleaning up temporary cluster 🧹
 
