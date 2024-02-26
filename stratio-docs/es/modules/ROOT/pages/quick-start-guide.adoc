@@ -114,7 +114,7 @@ Creating temporary cluster "example-aws" ...
  ✓ Installing CSI in workload cluster 💾
  ✓ Preparing nodes in workload cluster 📦
  ✓ Installing StorageClass in workload cluster 💾
- ✓ Enabling workload cluster's self-healing 🏥
+ ✓ Enabling workload clusters self-healing 🏥
  ✓ Installing CAPx in workload cluster 🎖️
  ✓ Configuring Network Policy Engine in workload cluster 🚧
  ✓ Installing cluster-autoscaler in workload cluster 🗚
@@ -236,7 +236,7 @@ Creating temporary cluster "example-eks" ...
  ✓ Preparing nodes in workload cluster 📦
  ✓ Installing AWS LB controller in workload cluster ⚖️
  ✓ Installing StorageClass in workload cluster 💾
- ✓ Enabling workload cluster's self-healing 🏥
+ ✓ Enabling workload clusters self-healing 🏥
  ✓ Installing CAPx in workload cluster 🎖️
  ✓ Configuring Network Policy Engine in workload cluster 🚧
  ✓ Installing cluster-autoscaler in workload cluster 🗚
@@ -373,7 +373,7 @@ Creating temporary cluster "example-gcp" ...
  ✓ Creating Kubernetes RBAC for internal loadbalancing 🔐
  ✓ Preparing nodes in workload cluster 📦
  ✓ Installing StorageClass in workload cluster 💾
- ✓ Enabling workload cluster's self-healing 🏥
+ ✓ Enabling workload clusters self-healing 🏥
  ✓ Installing CAPx in workload cluster 🎖️
  ✓ Configuring Network Policy Engine in workload cluster 🚧
  ✓ Installing cluster-autoscaler in workload cluster 🗚
@@ -504,7 +504,7 @@ Creating temporary cluster "example-azure" ...
  ✓ Installing CSI in workload cluster 💾 
  ✓ Preparing nodes in workload cluster 📦 
  ✓ Installing StorageClass in workload cluster 💾 
- ✓ Enabling workload cluster's self-healing 🏥 
+ ✓ Enabling workload clusters self-healing 🏥 
  ✓ Installing CAPx in workload cluster 🎖️ 
  ✓ Installing cluster-autoscaler in workload cluster 🗚 
  ✓ Installing keos cluster operator in workload cluster 💻 
@@ -619,7 +619,7 @@ Creating temporary cluster "example-aks" ...
  ✓ Saving the workload cluster kubeconfig 📝
  ✓ Preparing nodes in workload cluster 📦
  ✓ Installing StorageClass in workload cluster 💾
- ✓ Enabling workload cluster's self-healing 🏥
+ ✓ Enabling workload clusters self-healing 🏥
  ✓ Installing CAPx in workload cluster 🎖️
  ✓ Installing keos cluster operator in workload cluster 💻
  ✓ Creating cloud-provisioner Objects backup 🗄️
