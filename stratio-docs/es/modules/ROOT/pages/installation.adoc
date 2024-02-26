@@ -900,7 +900,7 @@ Creating temporary cluster "stratio-pre" ...
  ✓ Creating Kubernetes RBAC for internal loadbalancing 🔐
  ✓ Preparing nodes in workload cluster 📦
  ✓ Installing StorageClass in workload cluster 💾
- ✓ Enabling workload cluster's self-healing 🏥
+ ✓ Enabling workload clusters self-healing 🏥
  ✓ Installing CAPx in workload cluster 🎖️
  ✓ Configuring Network Policy Engine in workload cluster 🚧
  ✓ Installing cluster-autoscaler in workload cluster 🗚
