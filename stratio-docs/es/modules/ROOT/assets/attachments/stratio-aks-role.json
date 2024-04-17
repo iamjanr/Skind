@@ -4,6 +4,9 @@
     "Description": "Stratio aks role permissions",
     "Actions": [
         "Microsoft.ContainerRegistry/registries/pull/read",
+        "Microsoft.ContainerRegistry/registries/*/read",
+        "Microsoft.ContainerRegistry/registries/*/write",
+        "Microsoft.ContainerRegistry/registries/generateCredentials/action",
         "Microsoft.Resources/subscriptions/resourcegroups/read",
         "Microsoft.Resources/subscriptions/resourcegroups/write",
         "Microsoft.Resources/subscriptions/resourcegroups/delete",
