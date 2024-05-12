@@ -19,6 +19,7 @@ package create
 
 import (
 	"errors"
+	"fmt" // Import the fmt package for printing  // Added by JANR
 
 	"github.com/spf13/cobra"
 
@@ -29,6 +30,11 @@ import (
 
 // NewCommand returns a new cobra.Command for cluster creation
 func NewCommand(logger log.Logger, streams cmd.IOStreams) *cobra.Command {
+	// Print information in different lines: // Added by JANR
+	// Relative path: // Added by JANR
+	// Brief function goal: // Added by JANR
+	// All functions called in order: // Added by JANR
+	fmt.Println("(3) Path: skin/pkg/cmd/kind/create/create.go - NewCommand()") // Added by JANR
 	cmd := &cobra.Command{
 		Args:  cobra.NoArgs,
 		Use:   "create",
@@ -42,6 +48,6 @@ func NewCommand(logger log.Logger, streams cmd.IOStreams) *cobra.Command {
 			return errors.New("Subcommand is required")
 		},
 	}
-	cmd.AddCommand(createcluster.NewCommand(logger, streams))
+	cmd.AddCommand(createcluster.NewCommand(logger, streams)) // createcluster.NewCommand refers to import "sigs.k8s.io/kind/pkg/cmd/kind/create/cluster"
 	return cmd
 }

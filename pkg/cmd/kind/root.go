@@ -18,8 +18,10 @@ limitations under the License.
 package kind
 
 import (
+	"fmt" // Added by JANR
 	"io"
 	"io/ioutil"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -43,12 +45,19 @@ type flagpole struct {
 
 // NewCommand returns a new cobra.Command implementing the root command for kind
 func NewCommand(logger log.Logger, streams cmd.IOStreams) *cobra.Command {
-	flags := &flagpole{}
-	cmd := &cobra.Command{
-		Args:  cobra.NoArgs,
-		Use:   "cloud-provisioner",
-		Short: "cloud-provisioner is a tool for managing local Kubernetes clusters",
-		Long:  "cloud-provisioner creates and manages cloud Kubernetes clusters using cloud providers",
+	// Print information in different lines: // Added by JANR
+	// Relative path: // Added by JANR
+	// Brief function goal: // Added by JANR
+	// All functions called in order: // Added by JANR
+	fmt.Println("(2) Path: skin/pkg/cmd/kind/root.go - NewCommand()")                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  // Added by JANR
+	fmt.Println("(2) Brief function goal: NewCommand returns a new cobra.Command implementing the root command for kind")                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              // Added by JANR
+	fmt.Println("(2) All functions called in order: &flagpole{}, cmd := &cobra.Command{}, cmd.SetOut(streams.Out), cmd.SetErr(streams.ErrOut), cmd.PersistentFlags().StringVar(), cmd.PersistentFlags().Int32VarP(), cmd.PersistentFlags().BoolVarP(), cmd.AddCommand(build.NewCommand(logger, streams)), cmd.AddCommand(completion.NewCommand(logger, streams)), cmd.AddCommand(create.NewCommand(logger, streams)), cmd.AddCommand(delete.NewCommand(logger, streams)), cmd.AddCommand(export.NewCommand(logger, streams)), cmd.AddCommand(get.NewCommand(logger, streams)), cmd.AddCommand(version.NewCommand(logger, streams)), cmd.AddCommand(load.NewCommand(logger, streams))") // Added by JANR
+	flags := &flagpole{}                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               // This is a struct that holds the flags for the command	// Added by JANR
+	cmd := &cobra.Command{                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             // This is the root command for the kind command	// Added by JANR
+		Args:  cobra.NoArgs,                                                                            // This is the number of arguments the command expects	// Added by JANR
+		Use:   "cloud-provisioner",                                                                     // This is the name of the command	// Added by JANR
+		Short: "cloud-provisioner is a tool for managing local Kubernetes clusters",                    // This is a short description of the command	// Added by JANR
+		Long:  "cloud-provisioner creates and manages cloud Kubernetes clusters using cloud providers", // This is a long description of the command	// Added by JANR
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			return runE(logger, flags, cmd)
 		},
@@ -79,14 +88,21 @@ func NewCommand(logger log.Logger, streams cmd.IOStreams) *cobra.Command {
 		"silence all stderr output",
 	)
 	// add all top level subcommands
-	cmd.AddCommand(build.NewCommand(logger, streams))
+	cmd.AddCommand(build.NewCommand(logger, streams)) // This is the build command	// Added by JANR
 	cmd.AddCommand(completion.NewCommand(logger, streams))
-	cmd.AddCommand(create.NewCommand(logger, streams))
+	cmd.AddCommand(create.NewCommand(logger, streams)) //create refers to the import "sigs.k8s.io/kind/pkg/cmd/kind/create"	// Added by JANR
 	cmd.AddCommand(delete.NewCommand(logger, streams))
 	cmd.AddCommand(export.NewCommand(logger, streams))
 	cmd.AddCommand(get.NewCommand(logger, streams))
 	cmd.AddCommand(version.NewCommand(logger, streams))
 	cmd.AddCommand(load.NewCommand(logger, streams))
+
+	// Print the command-line arguments // Added by JANR
+	fmt.Println("(2) Path: skin/pkg/cmd/kind/root.go - Args returned by NewCommand()") // Added by JANR
+	fmt.Println("(2) Command-line arguments:")                                         // Added by JANR
+	for i, arg := range os.Args[1:] {                                                  // Added by JANR
+		fmt.Printf("Argument %d: %s\n", i+1, arg) // Added by JANR
+	} // Added by JANR
 	return cmd
 }
 

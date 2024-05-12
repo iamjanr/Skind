@@ -60,6 +60,13 @@ const secretsDefaultPath = "./secrets.yml"
 
 // NewCommand returns a new cobra.Command for cluster creation
 func NewCommand(logger log.Logger, streams cmd.IOStreams) *cobra.Command {
+	// Print information in different lines: // Added by JANR
+	// Relative path: // Added by JANR
+	// Brief function goal: // Added by JANR
+	// All functions called in order: // Added by JANR
+	fmt.Println("(4) Path: skin/pkg/cmd/kind/create/cluster/createcluster.go - NewCommand()")                                      // Added by JANR
+	fmt.Println("(4) Brief function goal: NewCommand returns a new cobra.Command for cluster creation")                            // Added by JANR
+	fmt.Println("(4) Brief additional information: We have defined all additional flags that are needed for the cluster creation") // Added by JANR
 	flags := &flagpole{}
 	cmd := &cobra.Command{
 		Args:  cobra.NoArgs,
@@ -147,10 +154,22 @@ func NewCommand(logger log.Logger, streams cmd.IOStreams) *cobra.Command {
 		"by setting this flag the descriptor will be validated and the cluster won't be created",
 	)
 
+	// Print the command-line arguments // Added by JANR
+	fmt.Println("(4) Path: skin/pkg/cmd/kind/root.go - Args returned by NewCommand()") // Added by JANR
+	fmt.Println("(4) Command-line arguments:")                                         // Added by JANR
+	for i, arg := range os.Args[1:] {                                                  // Added by JANR
+		fmt.Printf("Argument %d: %s\n", i+1, arg) // Added by JANR
+	} // Added by JANR
+
 	return cmd
 }
 
 func runE(logger log.Logger, streams cmd.IOStreams, flags *flagpole) error {
+	// Print information in different lines: // Added by JANR
+	// Relative path: // Added by JANR
+	// Brief function goal: // Added by JANR
+	// All functions called in order: // Added by JANR
+	fmt.Println("(4) Path: skin/pkg/cmd/kind/create/cluster/createcluster.go - runE()") // Added by JANR
 
 	err := validateFlags(flags)
 	if err != nil {
@@ -286,6 +305,12 @@ func requestPassword(request string) (string, error) {
 }
 
 func validateFlags(flags *flagpole) error {
+	// Print information in different lines: // Added by JANR
+	// Relative path: // Added by JANR
+	// Brief function goal: // Added by JANR
+	// All functions called in order: // Added by JANR
+	fmt.Println("(4) Path: skin/pkg/cmd/kind/create/cluster/createcluster.go - validateFlags()")       // Added by JANR
+	fmt.Println("(4) Brief function goal: validateFlags validates the flags for the cluster creation") // Added by JANR
 	count := 0
 	if flags.AvoidCreation {
 		count++
@@ -300,4 +325,29 @@ func validateFlags(flags *flagpole) error {
 		return errors.New("Flags --retain, --avoid-creation, and --keep-mgmt are mutually exclusive")
 	}
 	return nil
-}
+
+
+// JANR: Improvement PDTE
+
+//func validateFlags(flags *flagpole) error {
+//	// Print information in different lines: // Added by JANR
+//	// Relative path: // Added by JANR
+//	// Brief function goal: // Added by JANR
+//	// All functions called in order: // Added by JANR
+//	fmt.Println("(4) Path: skin/pkg/cmd/kind/create/cluster/createcluster.go - validateFlags()")       // Added by JANR
+//	fmt.Println("(4) Brief function goal: validateFlags validates the flags for the cluster creation") // Added by JANR
+//	var conflictingFlags []string
+//	if flags.AvoidCreation {
+//		conflictingFlags = append(conflictingFlags, "--avoid-creation")
+//	}
+//	if flags.Retain {
+//		conflictingFlags = append(conflictingFlags, "--retain")
+//	}
+//	if flags.MoveManagement {
+//		conflictingFlags = append(conflictingFlags, "--keep-mgmt")
+//	}
+//	if len(conflictingFlags) > 1 {
+//		return fmt.Errorf("flags %v are mutually exclusive", conflictingFlags)
+//	}
+//	return nil
+//}

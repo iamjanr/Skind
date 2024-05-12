@@ -17,7 +17,7 @@ limitations under the License.
 package main
 
 import (
-	"sigs.k8s.io/kind/cmd/kind/app"
+	"sigs.k8s.io/kind/cmd/kind/app" // This line imports the app package from the kind project
 )
 
 func main() {

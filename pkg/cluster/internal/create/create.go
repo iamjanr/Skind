@@ -117,7 +117,7 @@ func Cluster(logger log.Logger, p providers.Provider, opts *ClusterOptions) erro
 	status := cli.StatusForLogger(logger)
 
 	// we're going to start creating now, tell the user
-	logger.V(0).Infof("Creating temporary cluster %q ...\n", opts.Config.Name)
+	logger.V(0).Infof("Creating temporary cluster JANR %q ...\n", opts.Config.Name)
 
 	// Create node containers implementing defined config Nodes
 	if err := p.Provision(status, opts.Config, opts.DockerRegUrl); err != nil {
@@ -240,9 +240,9 @@ func logSalutation(logger log.Logger) {
 		"2. Stratio KEOS documentation",
 	}
 
-    for _, salutation := range salutations {
-        logger.V(0).Info(salutation)
-    }
+	for _, salutation := range salutations {
+		logger.V(0).Info(salutation)
+	}
 }
 
 func fixupOptions(opts *ClusterOptions) error {
