@@ -17,6 +17,8 @@ limitations under the License.
 package validate
 
 import (
+	"fmt" // Added by JANR
+
 	"sigs.k8s.io/kind/pkg/commons"
 )
 
@@ -28,6 +30,16 @@ type ValidateParams struct {
 }
 
 func Cluster(params *ValidateParams) (commons.ClusterCredentials, error) {
+	// Print information in different lines: // Added by JANR
+	// Relative path: // Added by JANR
+	// Brief function goal: // Added by JANR
+	// All functions called in order: // Added by JANR
+	fmt.Println("(7)(1) Path: Skind/pkg/cluster/internal/validate/validate.go - Function: Cluster()") // Added by JANR
+	fmt.Println("(7)(1) Brief function goal: Validates the credentials using the validateCredentials function.")
+	fmt.Println("(7)(1) Brief function goal: If a ClusterConfig is provided, it extracts the Spec from it.")
+	fmt.Println("(7)(1) Brief function goal: Validates common parameters between the KeosCluster and the ClusterConfigSpec using the validateCommon function.")
+	fmt.Println("(7)(1) Brief function goal: Depending on the infrastructure provider specified in the KeosCluster (aws, gcp, or azure), it validates the specific provider's parameters using the corresponding function (validateAWS, validateGCP, or validateAzure).")
+
 	var err error
 	var creds commons.ClusterCredentials
 
@@ -35,6 +47,7 @@ func Cluster(params *ValidateParams) (commons.ClusterCredentials, error) {
 	if err != nil {
 		return commons.ClusterCredentials{}, err
 	}
+	fmt.Println("(7)(1) - Print - creds: ", creds) // Added by JANR
 	clusterConfigSpec := commons.ClusterConfigSpec{}
 	if params.ClusterConfig != nil {
 		clusterConfigSpec = params.ClusterConfig.Spec

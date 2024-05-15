@@ -37,7 +37,7 @@ func Main() {
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
 	// All functions called in order: // Added by JANR
-	fmt.Println("(1)(1) Path: skin/cmd/kind/app/main.go - Main() ")                                                                             // Added by JANR
+	fmt.Println("(1)(1) Path: skin/cmd/kind/app/main.go - Function: Main() ")                                                                   // Added by JANR
 	fmt.Println("(1)(1) Brief function goal: Main is the kind main(), it will invoke Run(), if an error is returned it will then call os.Exit") // Added by JANR
 	fmt.Println("(1)(1) All functions called in order: Run()")                                                                                  // Added by JANR
 
@@ -53,7 +53,7 @@ func Run(logger log.Logger, streams cmd.IOStreams, args []string) error {
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
 	// All functions called in order: // Added by JANR
-	fmt.Println("(1)(2) Path: skin/cmd/kind/app/main.go - Run()")                                                      // Added by JANR
+	fmt.Println("(1)(2) Path: Skind/cmd/kind/app/main.go - Function: Run()")                                           // Added by JANR
 	fmt.Println("(1)(2) Brief function goal: Run invokes the kind root command, returning the error")                  // Added by JANR
 	fmt.Println("(1)(2) All functions called in order: checkQuiet(), kind.NewCommand(), c.SetArgs(args), c.Execute()") // Added by JANR
 	// NOTE: we handle the quiet flag here so we can fully silence cobra
@@ -81,8 +81,8 @@ func checkQuiet(args []string) bool {
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
 	// All functions called in order: // Added by JANR
-	fmt.Println("(1)(3) Path: skin/cmd/kind/app/main.go - checkQuiet()")                                                                                           // Added by JANR
-	fmt.Println("(1)(3) Brief function goal: checkQuiet returns true if -q / --quiet was set in args")                                                             // Added by JANR
+	fmt.Println("(1)(3) Path: Skind/cmd/kind/app/main.go - Function: checkQuiet()")                                                                                // Added by JANR
+	fmt.Println("(1)(3) Brief function goal: checkQuiet returns true if --quiet was set in args")                                                                  // Added by JANR
 	fmt.Println("(1)(3) All functions called in order: pflag.NewFlagSet(), flags.ParseErrorsWhitelist.UnknownFlags, flags.BoolVarP(), flags.Usage, flags.Parse()") // Added by JANR
 	// create a new flag set	// Added by JANR
 	flags := pflag.NewFlagSet("persistent-quiet", pflag.ContinueOnError)
@@ -109,7 +109,7 @@ func logError(logger log.Logger, err error) {
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
 	// All functions called in order: // Added by JANR
-	fmt.Println("(1)(4) Path: skin/cmd/kind/app/main.go - logError()") // Added by JANR
+	fmt.Println("(1)(4) Path: Skind/cmd/kind/app/main.go - Function: logError()") // Added by JANR
 	colorEnabled := cmd.ColorEnabled(logger)
 	if colorEnabled {
 		logger.Errorf("\x1b[31mERROR\x1b[0m: %v", err)

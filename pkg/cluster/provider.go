@@ -17,6 +17,7 @@ limitations under the License.
 package cluster
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -59,6 +60,13 @@ type Provider struct {
 
 // NewProvider returns a new provider based on the supplied options
 func NewProvider(options ...ProviderOption) *Provider {
+	// Print information in different lines: // Added by JANR
+	// Relative path: // Added by JANR
+	// Brief function goal: // Added by JANR
+	// All functions called in order: // Added by JANR
+	fmt.Println("(6)(1) Path: Skind/pkg/cluster/provider.go - Function: NewProvider()")                         // Added by JANR
+	fmt.Println("(6)(1) Brief function goal: NewProvider returns a new provider based on the supplied options") // Added by JANR
+
 	p := &Provider{
 		logger: log.NoopLogger{},
 	}
@@ -92,6 +100,9 @@ func NewProvider(options ...ProviderOption) *Provider {
 		}
 		providerOpt.apply(p)
 	}
+
+	// Print the provider type // Added by JANR
+	fmt.Println("(6)(1) - Print - Provider type: ", p.provider) // Added by JANR
 	return p
 }
 

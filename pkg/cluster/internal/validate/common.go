@@ -35,6 +35,13 @@ const (
 var k8sVersionSupported = []string{"1.24", "1.25", "1.26", "1.27", "1.28"}
 
 func validateCommon(spec commons.KeosSpec, clusterConfigSpec commons.ClusterConfigSpec) error {
+	// Print information in different lines: // Added by JANR
+	// Relative path: // Added by JANR
+	// Brief function goal: // Added by JANR
+	// All functions called in order: // Added by JANR
+	fmt.Println("(10)(1) Path: Skind/pkg/cluster/internal/validate/common.go - Function: validateCommon()")                                         // Added by JANR
+	fmt.Println("(10)(1) Brief function goal: Validate (k8s_version, workers specifications, volumes, and cluster configuration) of the KeosSpec.") // Added by JANR
+
 	var err error
 	if err = validateK8SVersion(spec.K8SVersion); err != nil {
 		return err
@@ -61,6 +68,12 @@ func validateClusterConfig(spec commons.KeosSpec, clusterConfigSpec commons.Clus
 }
 
 func validateK8SVersion(v string) error {
+	// Print information in different lines: // Added by JANR
+	// Relative path: // Added by JANR
+	// Brief function goal: // Added by JANR
+	// All functions called in order: // Added by JANR
+	fmt.Println("(10)(2) Path: Skind/pkg/cluster/internal/validate/common.go - Function: validateK8SVersion()") // Added by JANR
+	fmt.Println("(10)(2) Brief function goal: Validates the Kubernetes version regex and supported versions.")  // Added by JANR
 	var isVersion = regexp.MustCompile(`^v\d.\d{2}.\d{1,2}(-gke.\d{3,4})?$`).MatchString
 	if !isVersion(v) {
 		return errors.New("spec: Invalid value: \"k8s_version\": regex used for validation is '^v\\d.\\d{2}.\\d{1,2}(-gke.\\d{3,4})?$'")
@@ -74,6 +87,12 @@ func validateK8SVersion(v string) error {
 }
 
 func validateWorkers(wn commons.WorkerNodes) error {
+	// Print information in different lines: // Added by JANR
+	// Relative path: // Added by JANR
+	// Brief function goal: // Added by JANR
+	// All functions called in order: // Added by JANR
+	fmt.Println("(10)(3) Path: Skind/pkg/cluster/internal/validate/common.go - Function: validateWorkers()") // Added by JANR
+	fmt.Println("(10)(3) Brief function goal: Validates the worker nodes specifications.")                   // Added by JANR
 	if err := validateWorkersName(wn); err != nil {
 		return err
 	}
@@ -90,6 +109,12 @@ func validateWorkers(wn commons.WorkerNodes) error {
 }
 
 func validateWorkersName(workerNodes commons.WorkerNodes) error {
+	// Print information in different lines: // Added by JANR
+	// Relative path: // Added by JANR
+	// Brief function goal: // Added by JANR
+	// All functions called in order: // Added by JANR
+	fmt.Println("(10)(4) Path: Skind/pkg/cluster/internal/validate/common.go - Function: validateWorkersName()") // Added by JANR
+	fmt.Println("(10)(4) Brief function goal: Validates the worker nodes names. regex, length, and uniqueness.") // Added by JANR
 	regex := regexp.MustCompile(`^[-a-z]([-a-z0-9]*[a-z0-9])+$`)
 	for i, worker := range workerNodes {
 		// Validate worker name
@@ -116,51 +141,57 @@ func validateWorkersName(workerNodes commons.WorkerNodes) error {
 }
 
 func validateWorkersQuantity(workerNodes commons.WorkerNodes) error {
+	// Print information in different lines: // Added by JANR
+	// Relative path: // Added by JANR
+	// Brief function goal: // Added by JANR
+	// All functions called in order: // Added by JANR
+	fmt.Println("(10)(5) Path: Skind/pkg/cluster/internal/validate/common.go - Function: validateWorkersQuantity()") // Added by JANR
+
 	var InitialBalancedWorkerNode int
 	var InitialUnBalancedWorkerNode int
 	numberOfNodes := len(workerNodes)
 
 	for _, wn := range workerNodes {
-		var isBalanced = wn.ZoneDistribution == "balanced" || (wn.ZoneDistribution == "" && wn.AZ == "")
+		var isBalanced = wn.ZoneDistribution == "balanced" || (wn.ZoneDistribution == "" && wn.AZ == "") // Default is balanced	// Added by JANR
 
 		// Cluster Autoscaler doesn't scale a managed node group lower than minSize or higher than maxSize.
-		if wn.NodeGroupMaxSize < *wn.Quantity && wn.NodeGroupMaxSize != 0 {
+		if wn.NodeGroupMaxSize < *wn.Quantity && wn.NodeGroupMaxSize != 0 { // If the max size is less than the quantity and the max size is not 0, then return an error. // Added by JANR
 			return errors.New("max_size in WorkerNodes " + wn.Name + " must be equal or greater than quantity")
 		}
-		if wn.NodeGroupMinSize != nil && (*wn.Quantity < *wn.NodeGroupMinSize) {
+		if wn.NodeGroupMinSize != nil && (*wn.Quantity < *wn.NodeGroupMinSize) { // If the quantity is less than the min size, then return an error. // Added by JANR
 			return errors.New("quantity in WorkerNodes " + wn.Name + " must be equal or greater than min_size")
 		}
-		if wn.AZ != "" && wn.ZoneDistribution != "" {
+		if wn.AZ != "" && wn.ZoneDistribution != "" { // If the AZ is not empty and the zone distribution is not empty, then return an error. // Added by JANR
 			return errors.New("az and zone_distribution cannot be used at the same time for " + wn.Name)
 		}
-		if isBalanced && *wn.Quantity%3 != 0 {
+		if isBalanced && *wn.Quantity%3 != 0 { // If the worker node is balanced and the quantity is not a multiple of 3, then return an error. // Added by JANR
 			return errors.New("quantity in WorkerNode: " + wn.Name + " must be zero or multiple of 3")
 		}
 
 		// Validate when only one WorkerNode is defined
 		if numberOfNodes == 1 {
 			switch {
-			case isBalanced && (*wn.Quantity == 0 || *wn.Quantity%3 != 0):
+			case isBalanced && (*wn.Quantity == 0 || *wn.Quantity%3 != 0): // If the worker node is balanced and the quantity is 0 or the quantity is not a multiple of 3, then return an error. // Added by JANR
 				return errors.New("in case of defining one WorkerNode, quantity must be multiple of 3 for " + wn.Name)
-			case !isBalanced && *wn.Quantity < 1:
+			case !isBalanced && *wn.Quantity < 1: // If the worker node is not balanced and the quantity is less than 1, then return an error. // Added by JANR
 				return errors.New("in case of defining one WorkerNode, quantity must be greater than 0 for " + wn.Name)
 			default:
-				if isBalanced {
+				if isBalanced { // If the worker node is balanced, then increment the InitialBalancedWorkerNode. // Added by JANR
 					InitialBalancedWorkerNode++
-				} else {
+				} else { // If the worker node is not balanced, then increment the InitialUnBalancedWorkerNode. // Added by JANR
 					InitialUnBalancedWorkerNode++
 				}
 			}
-		} else if numberOfNodes > 1 && *wn.Quantity > 0 {
-			if isBalanced && *wn.Quantity%3 == 0 {
+		} else if numberOfNodes > 1 && *wn.Quantity > 0 { // If the number of nodes is greater than 1 and the quantity is greater than 0, then check if the worker node is balanced or not. // Added by JANR
+			if isBalanced && *wn.Quantity%3 == 0 { // If the worker node is balanced and the quantity is a multiple of 3, then increment the InitialBalancedWorkerNode. // Added by JANR
 				InitialBalancedWorkerNode++
-			} else if !isBalanced {
+			} else if !isBalanced { // If the worker node is not balanced, then increment the InitialUnBalancedWorkerNode. // Added by JANR
 				InitialUnBalancedWorkerNode++
 			}
 		}
 	}
 
-	if InitialBalancedWorkerNode == 0 && InitialUnBalancedWorkerNode == 0 {
+	if InitialBalancedWorkerNode == 0 && InitialUnBalancedWorkerNode == 0 { // If the InitialBalancedWorkerNode is 0 and the InitialUnBalancedWorkerNode is 0, then return an error. // Added by JANR
 		return errors.New("at least one WorkerNode must have quantity equal or greater than 1 for unbalanced and greater than 0 and multiple of 3 for balanced")
 	}
 
@@ -168,6 +199,12 @@ func validateWorkersQuantity(workerNodes commons.WorkerNodes) error {
 }
 
 func validateWorkersTaints(wns commons.WorkerNodes) error {
+	// Print information in different lines: // Added by JANR
+	// Relative path: // Added by JANR
+	// Brief function goal: // Added by JANR
+	// All functions called in order: // Added by JANR
+	fmt.Println("(10)(6) Path: Skind/pkg/cluster/internal/validate/common.go - Function: validateWorkersTaints()") // Added by JANR
+	fmt.Println("(10)(6) Brief function goal: Validates the worker nodes taints format (regex).")                  // Added by JANR
 	regex := regexp.MustCompile(`^(\w+|.*)=(\w+|.*):(NoSchedule|PreferNoSchedule|NoExecute)$`)
 	for _, wn := range wns {
 		for i, taint := range wn.Taints {
@@ -180,19 +217,31 @@ func validateWorkersTaints(wns commons.WorkerNodes) error {
 }
 
 func validateWorkersType(wns commons.WorkerNodes) error {
+	// Print information in different lines: // Added by JANR
+	// Relative path: // Added by JANR
+	// Brief function goal: // Added by JANR
+	// All functions called in order: // Added by JANR
+	fmt.Println("(10)(7) Path: Skind/pkg/cluster/internal/validate/common.go - Function: validateWorkersType()") // Added by JANR
+	fmt.Println("(10)(7) Brief function goal: Validates the worker nodes type.")                                 // Added by JANR
 	hasNodeSystem := false
 	for _, wn := range wns {
-		if len(wn.Taints) == 0 && !wn.Spot {
+		if len(wn.Taints) == 0 && !wn.Spot { // If the length of the taints is 0 and the worker node is not a spot instance, then set hasNodeSystem to true. // Added by JANR
 			hasNodeSystem = true
 		}
 	}
-	if !hasNodeSystem {
+	if !hasNodeSystem { // There must be at least one worker node that is not a spot instance and does not have taints. // Added by JANR
 		return errors.New("at least one worker node must be non spot and without taints")
 	}
 	return nil
 }
 
 func validateVolumes(spec commons.KeosSpec) error {
+	// Print information in different lines: // Added by JANR
+	// Relative path: // Added by JANR
+	// Brief function goal: // Added by JANR
+	// All functions called in order: // Added by JANR
+	fmt.Println("(10)(8) Path: Skind/pkg/cluster/internal/validate/common.go - Function: validateVolumes()")      // Added by JANR
+	fmt.Println("(10)(8) Brief function goal: Validates the volumes specifications. Duplicates are not allowed.") // Added by JANR
 	if !spec.ControlPlane.Managed {
 		for i, ev := range spec.ControlPlane.ExtraVolumes {
 			for _, ev2 := range spec.ControlPlane.ExtraVolumes[i+1:] {
@@ -221,6 +270,12 @@ func validateVolumes(spec commons.KeosSpec) error {
 }
 
 func validateVolumeType(t string, supportedTypes []string) error {
+	// Print information in different lines: // Added by JANR
+	// Relative path: // Added by JANR
+	// Brief function goal: // Added by JANR
+	// All functions called in order: // Added by JANR
+	fmt.Println("(10)(9) Path: Skind/pkg/cluster/internal/validate/common.go - Function: validateVolumeType()") // Added by JANR
+	fmt.Println("(10)(9) Brief function goal: Validates the volume type.")                                      // Added by JANR
 	if t != "" && !commons.Contains(supportedTypes, t) {
 		return errors.New(t + ", supported types: " + fmt.Sprint(strings.Join(supportedTypes, ", ")))
 	}

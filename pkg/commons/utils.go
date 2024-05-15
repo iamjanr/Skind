@@ -19,6 +19,7 @@ package commons
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"time"
 	"unicode"
 
@@ -307,6 +308,12 @@ func Contains(s []string, str string) bool {
 }
 
 func AWSGetConfig(ctx context.Context, secrets map[string]string, region string) (aws.Config, error) {
+	// Print information in different lines: // Added by JANR
+	// Relative path: // Added by JANR
+	// Brief function goal: // Added by JANR
+	// All functions called in order: // Added by JANR
+	fmt.Println("(11)(1) Path: Skind/pkg/cluster/internal/validate/utils.go - Function: AWSGetConfig()") // Added by JANR
+	fmt.Println("(11)(1) Brief function goal: Get AWS configuration.")                                   // Added by JANR
 	customProvider := credentials.NewStaticCredentialsProvider(
 		secrets["AccessKey"], secrets["SecretKey"], "",
 	)
@@ -318,10 +325,18 @@ func AWSGetConfig(ctx context.Context, secrets map[string]string, region string)
 	if err != nil {
 		return aws.Config{}, err
 	}
+	// Print information in different lines: // Added by JANR
+	fmt.Println("(11)(1) - Print - AWS Config: (usage aws sdk-go-v2) ", cfg) // Added by JANR
 	return cfg, nil
 }
 
 func AWSIsPrivateSubnet(ctx context.Context, svc *ec2.Client, subnetID *string) (bool, error) {
+	// Print information in different lines: // Added by JANR
+	// Relative path: // Added by JANR
+	// Brief function goal: // Added by JANR
+	// All functions called in order: // Added by JANR
+	fmt.Println("(11)(2) Path: Skind/pkg/cluster/internal/validate/utils.go - Function: AWSIsPrivateSubnet()") // Added by JANR
+	fmt.Println("(11)(2) Brief function goal: Check if subnet is private.")                                    // Added by JANR
 	keyname := "association.subnet-id"
 	drtInput := &ec2.DescribeRouteTablesInput{
 		Filters: []types.Filter{
@@ -331,7 +346,7 @@ func AWSIsPrivateSubnet(ctx context.Context, svc *ec2.Client, subnetID *string) 
 			},
 		},
 	}
-	rt, err := svc.DescribeRouteTables(ctx, drtInput)
+	rt, err := svc.DescribeRouteTables(ctx, drtInput) // aws sdk-go-v2	// Added by JANR
 	if err != nil {
 		return false, err
 	}
@@ -353,6 +368,12 @@ func AWSIsPrivateSubnet(ctx context.Context, svc *ec2.Client, subnetID *string) 
 }
 
 func AWSGetPrivateAZs(ctx context.Context, svc *ec2.Client, subnets []Subnets) ([]string, error) {
+	// Print information in different lines: // Added by JANR
+	// Relative path: // Added by JANR
+	// Brief function goal: // Added by JANR
+	// All functions called in order: // Added by JANR
+	fmt.Println("(11)(2) Path: Skind/pkg/cluster/internal/validate/utils.go - Function: AWSGetPrivateAZs()") // Added by JANR
+	fmt.Println("(11)(2) Brief function goal: Get private availability zones.")                              // Added by JANR
 	var azs []string
 	for _, s := range subnets {
 		isPrivate, err := AWSIsPrivateSubnet(ctx, svc, &s.SubnetId)
@@ -374,12 +395,20 @@ func AWSGetPrivateAZs(ctx context.Context, svc *ec2.Client, subnets []Subnets) (
 			}
 		}
 	}
+	// Print information in different lines: // Added by JANR
+	fmt.Println("(11)(2) - Print - azs: ", azs) // Added by JANR
 	return azs, nil
 }
 
 func AWSGetAZs(ctx context.Context, svc *ec2.Client) ([]string, error) {
+	// Print information in different lines: // Added by JANR
+	// Relative path: // Added by JANR
+	// Brief function goal: // Added by JANR
+	// All functions called in order: // Added by JANR
+	fmt.Println("(11)(3) Path: Skind/pkg/cluster/internal/validate/utils.go - Function: AWSGetAZs()") // Added by JANR
+	fmt.Println("(11)(3) Brief function goal: Get availability zones.")                               // Added by JANR
 	var azs []string
-	result, err := svc.DescribeAvailabilityZones(ctx, &ec2.DescribeAvailabilityZonesInput{})
+	result, err := svc.DescribeAvailabilityZones(ctx, &ec2.DescribeAvailabilityZonesInput{}) // aws sdk-go-v2	// Added by JANR
 	if err != nil {
 		return nil, err
 	}
@@ -389,6 +418,8 @@ func AWSGetAZs(ctx context.Context, svc *ec2.Client) ([]string, error) {
 		}
 		azs = append(azs, *az.ZoneName)
 	}
+	// Print information in different lines: // Added by JANR
+	fmt.Println("(11)(3) - Print - azs: ", azs) // Added by JANR
 	return azs, nil
 }
 
