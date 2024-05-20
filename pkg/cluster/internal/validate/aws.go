@@ -48,8 +48,8 @@ func validateAWS(spec commons.KeosSpec, providerSecrets map[string]string) error
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
 	// All functions called in order: // Added by JANR
-	fmt.Println("(11)(1) Path: Skind/pkg/cluster/internal/validate/aws.go - Function: validateAWS()") // Added by JANR
-	fmt.Println("(11)(1) Brief function goal: Validates the AWS cluster parameters.")                 // Added by JANR
+	fmt.Println("File(11) Step(1) Path: Skind/pkg/cluster/internal/validate/aws.go - Function: validateAWS()") // Added by JANR
+	fmt.Println("File(11) Step(1) Brief function goal: Validates the AWS cluster parameters.")                 // Added by JANR
 	var err error
 	var ctx = context.TODO() // This ctx is a context.Context type, which means it is a context. // TODO() is a function that returns a context.TODO. // Added by JANR
 
@@ -84,14 +84,14 @@ func validateAWS(spec commons.KeosSpec, providerSecrets map[string]string) error
 	}
 
 	for i, dr := range spec.DockerRegistries { // Validate the Docker registries. // Added by JANR
-		fmt.Println("(11)(1) - Print - Checking Docker registry Type: ", dr.Type) // Added by JANR
-		if dr.Type != "ecr" && dr.Type != "generic" {                             // If the dr.Type is not 'ecr' or 'generic', return an error. // Added by JANR
+		fmt.Println("File(11) Step(1) - Print - Checking Docker registry Type: ", dr.Type) // Added by JANR
+		if dr.Type != "ecr" && dr.Type != "generic" {                                      // If the dr.Type is not 'ecr' or 'generic', return an error. // Added by JANR
 			return errors.New("spec.docker_registries[" + strconv.Itoa(i) + "]: Invalid value: \"type\": only 'ecr' or 'generic' are supported in aws clusters")
 		}
 	}
 
 	for _, tag := range spec.ControlPlane.Tags {
-		fmt.Println("(11)(1) - Print - Checking Control Plane Tags: ", tag) // Added by JANR
+		fmt.Println("File(11) Step(1) - Print - Checking Control Plane Tags: ", tag) // Added by JANR
 		for k, v := range tag {
 			label := k + "=" + v
 			if err = validateAWSLabel(label); err != nil {
@@ -101,10 +101,10 @@ func validateAWS(spec commons.KeosSpec, providerSecrets map[string]string) error
 	}
 
 	if !spec.ControlPlane.Managed { // If cluster is unmanaged, validate the control plane. // Added by JANR
-		fmt.Println("(11)(1) - Print - Checking Unmanaged Control Plane") // Added by JANR
-		if spec.ControlPlane.NodeImage != "" {                            // If control plane node image is not empty, validate the AWS node image. // Added by JANR
-			fmt.Println("(11)(1) - Print - Checking Control Plane Node Image: ", spec.ControlPlane.NodeImage) // Added by JANR
-			if !isAWSNodeImage(spec.ControlPlane.NodeImage) {                                                 // If the spec.ControlPlane.NodeImage is not an AWS node image, return an error. // Added by JANR
+		fmt.Println("File(11) Step(1) - Print - Checking Unmanaged Control Plane") // Added by JANR
+		if spec.ControlPlane.NodeImage != "" {                                     // If control plane node image is not empty, validate the AWS node image. // Added by JANR
+			fmt.Println("File(11) Step(1) - Print - Checking Control Plane Node Image: ", spec.ControlPlane.NodeImage) // Added by JANR
+			if !isAWSNodeImage(spec.ControlPlane.NodeImage) {                                                          // If the spec.ControlPlane.NodeImage is not an AWS node image, return an error. // Added by JANR
 				return errors.New("spec.control_plane: Invalid value: \"node_image\": must have the format " + AWSNodeImageFormat)
 			}
 		}
@@ -178,8 +178,8 @@ func validateAWSNetwork(ctx context.Context, cfg aws.Config, spec commons.KeosSp
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
 	// All functions called in order: // Added by JANR
-	fmt.Println("(11)(2) Path: Skind/pkg/cluster/internal/validate/aws.go - Function: validateAWSNetwork()") // Added by JANR
-	fmt.Println("(11)(2) Brief function goal: Validates the AWS network.")                                   // Added by JANR
+	fmt.Println("File(11) Step(2) Path: Skind/pkg/cluster/internal/validate/aws.go - Function: validateAWSNetwork()") // Added by JANR
+	fmt.Println("File(11) Step(2) Brief function goal: Validates the AWS network.")                                   // Added by JANR
 	var err error
 
 	if spec.Networks.VPCID != "" {
@@ -276,8 +276,8 @@ func getAWSRegions(config aws.Config) ([]string, error) {
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
 	// All functions called in order: // Added by JANR
-	fmt.Println("(11)(2) Path: Skind/pkg/cluster/internal/validate/aws.go - Function: getAWSRegions()") // Added by JANR
-	fmt.Println("(11)(2) Brief function goal: Get the AWS regions.")                                    // Added by JANR
+	fmt.Println("File(11) Step(2) Path: Skind/pkg/cluster/internal/validate/aws.go - Function: getAWSRegions()") // Added by JANR
+	fmt.Println("File(11) Step(2) Brief function goal: Get the AWS regions.")                                    // Added by JANR
 	regions := []string{}
 
 	// Use a default region to authenticate
@@ -297,7 +297,7 @@ func getAWSRegions(config aws.Config) ([]string, error) {
 		regions = append(regions, *region.RegionName)
 	}
 	// Print information in different lines: // Added by JANR
-	fmt.Println("(11)(2) - Print - regions: ", regions) // Added by JANR
+	fmt.Println("File(11) Step(2) - Print - regions: ", regions) // Added by JANR
 	return regions, nil
 }
 
@@ -306,8 +306,8 @@ func getAWSVPCs(config aws.Config) ([]string, error) {
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
 	// All functions called in order: // Added by JANR
-	fmt.Println("(11)(2) Path: Skind/pkg/cluster/internal/validate/aws.go - Function: getAWSVPCs()") // Added by JANR
-	fmt.Println("(11)(2) Brief function goal: Get the AWS VPCs with a describe vpcs operation.")     // Added by JANR
+	fmt.Println("File(11) Step(2) Path: Skind/pkg/cluster/internal/validate/aws.go - Function: getAWSVPCs()") // Added by JANR
+	fmt.Println("File(11) Step(2) Brief function goal: Get the AWS VPCs with a describe vpcs operation.")     // Added by JANR
 	vpcs := []string{}
 
 	client := ec2.NewFromConfig(config)
@@ -320,7 +320,7 @@ func getAWSVPCs(config aws.Config) ([]string, error) {
 		vpcs = append(vpcs, *vpc.VpcId)
 	}
 	// Print information in different lines: // Added by JANR
-	fmt.Println("(11)(2) - Print - vpcs: ", vpcs) // Added by JANR
+	fmt.Println("File(11) Step(2) - Print - vpcs: ", vpcs) // Added by JANR
 	return vpcs, nil
 }
 
@@ -329,8 +329,8 @@ func getAWSSubnets(vpcId string, config aws.Config) ([]string, error) {
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
 	// All functions called in order: // Added by JANR
-	fmt.Println("(11)(2) Path: Skind/pkg/cluster/internal/validate/aws.go - Function: getAWSSubnets()") // Added by JANR
-	fmt.Println("(11)(2) Brief function goal: Get the AWS subnets with a describe subnets operation.")  // Added by JANR
+	fmt.Println("File(11) Step(2) Path: Skind/pkg/cluster/internal/validate/aws.go - Function: getAWSSubnets()") // Added by JANR
+	fmt.Println("File(11) Step(2) Brief function goal: Get the AWS subnets with a describe subnets operation.")  // Added by JANR
 	subnets := []string{}
 
 	client := ec2.NewFromConfig(config)
@@ -351,7 +351,7 @@ func getAWSSubnets(vpcId string, config aws.Config) ([]string, error) {
 		subnets = append(subnets, *subnet.SubnetId)
 	}
 	// Print information in different lines: // Added by JANR
-	fmt.Println("(11)(2) - Print - subnets: ", subnets) // Added by JANR
+	fmt.Println("File(11) Step(2) - Print - subnets: ", subnets) // Added by JANR
 	return subnets, nil
 }
 
@@ -360,8 +360,8 @@ func validateAWSStorageClass(sc commons.StorageClass, wn commons.WorkerNodes) er
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
 	// All functions called in order: // Added by JANR
-	fmt.Println("(11)(3) Path: Skind/pkg/cluster/internal/validate/aws.go - Function: validateAWSStorageClass()") // Added by JANR
-	fmt.Println("(11)(3) Brief function goal: Validates the AWS storage class.")                                  // Added by JANR
+	fmt.Println("File(11) Step(3) Path: Skind/pkg/cluster/internal/validate/aws.go - Function: validateAWSStorageClass()") // Added by JANR
+	fmt.Println("File(11) Step(3) Brief function goal: Validates the AWS storage class.")                                  // Added by JANR
 	var err error
 	var isKeyValid = regexp.MustCompile(`^arn:aws:kms:[a-zA-Z0-9-]+:\d{12}:key/[\w-]+$`).MatchString
 	var AWSFSTypes = []string{"xfs", "ext3", "ext4", "ext2"}
@@ -438,7 +438,7 @@ func validateAWSStorageClass(sc commons.StorageClass, wn commons.WorkerNodes) er
 	}
 	// Validate labels
 	if sc.Parameters.Labels != "" {
-		fmt.Println("(11)(3) - Print - Checking Labels: ", sc.Parameters.Labels) // Added by JANR
+		fmt.Println("File(11) Step(3) - Print - Checking Labels: ", sc.Parameters.Labels) // Added by JANR
 		if err = validateAWSLabel(sc.Parameters.Labels); err != nil {
 			return errors.Wrap(err, "invalid labels")
 		}
@@ -468,9 +468,9 @@ func validateAWSLabel(l string) error {
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
 	// All functions called in order: // Added by JANR
-	fmt.Println("(11)(4) Path: Skind/pkg/cluster/internal/validate/aws.go - Function: validateAWSLabel()")   // Added by JANR
-	fmt.Println("(11)(4) Brief function goal: Validates the AWS label format.")                              // Added by JANR
-	var isLabel = regexp.MustCompile(`^([\w\.\/-]+=[\w\.\/-]+)(\s?,\s?[\w\.\/-]+=[\w\.\/-]+)*$`).MatchString // example: key1=value1,key2=value2 // Added by JANR
+	fmt.Println("File(11) Step(4) Path: Skind/pkg/cluster/internal/validate/aws.go - Function: validateAWSLabel()") // Added by JANR
+	fmt.Println("File(11) Step(4) Brief function goal: Validates the AWS label format.")                            // Added by JANR
+	var isLabel = regexp.MustCompile(`^([\w\.\/-]+=[\w\.\/-]+)(\s?,\s?[\w\.\/-]+=[\w\.\/-]+)*$`).MatchString        // example: key1=value1,key2=value2 // Added by JANR
 	if !isLabel(l) {
 		return errors.New("incorrect format. Must have the format 'key1=value1,key2=value2'")
 	}
@@ -482,8 +482,8 @@ func validateAWSAZs(ctx context.Context, cfg aws.Config, spec commons.KeosSpec) 
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
 	// All functions called in order: // Added by JANR
-	fmt.Println("(11)(4) Path: Skind/pkg/cluster/internal/validate/aws.go - Function: validateAWSAZs()") // Added by JANR
-	fmt.Println("(11)(4) Brief function goal: Validates the AWS Availability Zones.")                    // Added by JANR
+	fmt.Println("File(11) Step(4) Path: Skind/pkg/cluster/internal/validate/aws.go - Function: validateAWSAZs()") // Added by JANR
+	fmt.Println("File(11) Step(4) Brief function goal: Validates the AWS Availability Zones.")                    // Added by JANR
 	var err error
 	var azs []string
 
@@ -515,7 +515,7 @@ func validateAWSAZs(ctx context.Context, cfg aws.Config, spec commons.KeosSpec) 
 		}
 	}
 	// Print information in different lines: // Added by JANR
-	fmt.Println("(11)(4) - Print - azs: ", azs) // Added by JANR
+	fmt.Println("File(11) Step(4) - Print - azs: ", azs) // Added by JANR
 	return nil
 }
 
@@ -524,8 +524,8 @@ func getAWSAzs(ctx context.Context, cfg aws.Config, region string) ([]string, er
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
 	// All functions called in order: // Added by JANR
-	fmt.Println("(11)(3) Path: Skind/pkg/cluster/internal/validate/aws.go - Function: getAWSAzs()") // Added by JANR
-	fmt.Println("(11)(3) Brief function goal: Get the AWS availability zones.")                     // Added by JANR
+	fmt.Println("File(11) Step(3) Path: Skind/pkg/cluster/internal/validate/aws.go - Function: getAWSAzs()") // Added by JANR
+	fmt.Println("File(11) Step(3) Brief function goal: Get the AWS availability zones.")                     // Added by JANR
 	var azs []string
 	svc := ec2.NewFromConfig(cfg)
 	result, err := svc.DescribeAvailabilityZones(ctx, &ec2.DescribeAvailabilityZonesInput{})
@@ -538,6 +538,6 @@ func getAWSAzs(ctx context.Context, cfg aws.Config, region string) ([]string, er
 		}
 	}
 	// Print information in different lines: // Added by JANR
-	fmt.Println("(11)(3) - Print - azs: ", azs) // Added by JANR
+	fmt.Println("File(11) Step(3) - Print - azs: ", azs) // Added by JANR
 	return azs, nil
 }

@@ -39,8 +39,8 @@ func validateCommon(spec commons.KeosSpec, clusterConfigSpec commons.ClusterConf
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
 	// All functions called in order: // Added by JANR
-	fmt.Println("(10)(1) Path: Skind/pkg/cluster/internal/validate/common.go - Function: validateCommon()")                                         // Added by JANR
-	fmt.Println("(10)(1) Brief function goal: Validate (k8s_version, workers specifications, volumes, and cluster configuration) of the KeosSpec.") // Added by JANR
+	fmt.Println("File(10) Step(1) Path: Skind/pkg/cluster/internal/validate/common.go - Function: validateCommon()")                                         // Added by JANR
+	fmt.Println("File(10) Step(1) Brief function goal: Validate (k8s_version, workers specifications, volumes, and cluster configuration) of the KeosSpec.") // Added by JANR
 
 	var err error
 	if err = validateK8SVersion(spec.K8SVersion); err != nil {
@@ -72,8 +72,8 @@ func validateK8SVersion(v string) error {
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
 	// All functions called in order: // Added by JANR
-	fmt.Println("(10)(2) Path: Skind/pkg/cluster/internal/validate/common.go - Function: validateK8SVersion()") // Added by JANR
-	fmt.Println("(10)(2) Brief function goal: Validates the Kubernetes version regex and supported versions.")  // Added by JANR
+	fmt.Println("File(10) Step(2) Path: Skind/pkg/cluster/internal/validate/common.go - Function: validateK8SVersion()") // Added by JANR
+	fmt.Println("File(10) Step(2) Brief function goal: Validates the Kubernetes version regex and supported versions.")  // Added by JANR
 	var isVersion = regexp.MustCompile(`^v\d.\d{2}.\d{1,2}(-gke.\d{3,4})?$`).MatchString
 	if !isVersion(v) {
 		return errors.New("spec: Invalid value: \"k8s_version\": regex used for validation is '^v\\d.\\d{2}.\\d{1,2}(-gke.\\d{3,4})?$'")
@@ -91,8 +91,8 @@ func validateWorkers(wn commons.WorkerNodes) error {
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
 	// All functions called in order: // Added by JANR
-	fmt.Println("(10)(3) Path: Skind/pkg/cluster/internal/validate/common.go - Function: validateWorkers()") // Added by JANR
-	fmt.Println("(10)(3) Brief function goal: Validates the worker nodes specifications.")                   // Added by JANR
+	fmt.Println("File(10) Step(3) Path: Skind/pkg/cluster/internal/validate/common.go - Function: validateWorkers()") // Added by JANR
+	fmt.Println("File(10) Step(3) Brief function goal: Validates the worker nodes specifications.")                   // Added by JANR
 	if err := validateWorkersName(wn); err != nil {
 		return err
 	}
@@ -113,8 +113,8 @@ func validateWorkersName(workerNodes commons.WorkerNodes) error {
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
 	// All functions called in order: // Added by JANR
-	fmt.Println("(10)(4) Path: Skind/pkg/cluster/internal/validate/common.go - Function: validateWorkersName()") // Added by JANR
-	fmt.Println("(10)(4) Brief function goal: Validates the worker nodes names. regex, length, and uniqueness.") // Added by JANR
+	fmt.Println("File(10) Step(4) Path: Skind/pkg/cluster/internal/validate/common.go - Function: validateWorkersName()") // Added by JANR
+	fmt.Println("File(10) Step(4) Brief function goal: Validates the worker nodes names. regex, length, and uniqueness.") // Added by JANR
 	regex := regexp.MustCompile(`^[-a-z]([-a-z0-9]*[a-z0-9])+$`)
 	for i, worker := range workerNodes {
 		// Validate worker name
@@ -145,7 +145,7 @@ func validateWorkersQuantity(workerNodes commons.WorkerNodes) error {
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
 	// All functions called in order: // Added by JANR
-	fmt.Println("(10)(5) Path: Skind/pkg/cluster/internal/validate/common.go - Function: validateWorkersQuantity()") // Added by JANR
+	fmt.Println("File(10) Step(5) Path: Skind/pkg/cluster/internal/validate/common.go - Function: validateWorkersQuantity()") // Added by JANR
 
 	var InitialBalancedWorkerNode int
 	var InitialUnBalancedWorkerNode int
@@ -203,8 +203,8 @@ func validateWorkersTaints(wns commons.WorkerNodes) error {
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
 	// All functions called in order: // Added by JANR
-	fmt.Println("(10)(6) Path: Skind/pkg/cluster/internal/validate/common.go - Function: validateWorkersTaints()") // Added by JANR
-	fmt.Println("(10)(6) Brief function goal: Validates the worker nodes taints format (regex).")                  // Added by JANR
+	fmt.Println("File(10) Step(6) Path: Skind/pkg/cluster/internal/validate/common.go - Function: validateWorkersTaints()") // Added by JANR
+	fmt.Println("File(10) Step(6) Brief function goal: Validates the worker nodes taints format (regex).")                  // Added by JANR
 	regex := regexp.MustCompile(`^(\w+|.*)=(\w+|.*):(NoSchedule|PreferNoSchedule|NoExecute)$`)
 	for _, wn := range wns {
 		for i, taint := range wn.Taints {
@@ -221,8 +221,8 @@ func validateWorkersType(wns commons.WorkerNodes) error {
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
 	// All functions called in order: // Added by JANR
-	fmt.Println("(10)(7) Path: Skind/pkg/cluster/internal/validate/common.go - Function: validateWorkersType()") // Added by JANR
-	fmt.Println("(10)(7) Brief function goal: Validates the worker nodes type.")                                 // Added by JANR
+	fmt.Println("File(10) Step(7) Path: Skind/pkg/cluster/internal/validate/common.go - Function: validateWorkersType()") // Added by JANR
+	fmt.Println("File(10) Step(7) Brief function goal: Validates the worker nodes type.")                                 // Added by JANR
 	hasNodeSystem := false
 	for _, wn := range wns {
 		if len(wn.Taints) == 0 && !wn.Spot { // If the length of the taints is 0 and the worker node is not a spot instance, then set hasNodeSystem to true. // Added by JANR
@@ -240,8 +240,8 @@ func validateVolumes(spec commons.KeosSpec) error {
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
 	// All functions called in order: // Added by JANR
-	fmt.Println("(10)(8) Path: Skind/pkg/cluster/internal/validate/common.go - Function: validateVolumes()")      // Added by JANR
-	fmt.Println("(10)(8) Brief function goal: Validates the volumes specifications. Duplicates are not allowed.") // Added by JANR
+	fmt.Println("File(10) Step(8) Path: Skind/pkg/cluster/internal/validate/common.go - Function: validateVolumes()")      // Added by JANR
+	fmt.Println("File(10) Step(8) Brief function goal: Validates the volumes specifications. Duplicates are not allowed.") // Added by JANR
 	if !spec.ControlPlane.Managed {
 		for i, ev := range spec.ControlPlane.ExtraVolumes {
 			for _, ev2 := range spec.ControlPlane.ExtraVolumes[i+1:] {
@@ -274,8 +274,8 @@ func validateVolumeType(t string, supportedTypes []string) error {
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
 	// All functions called in order: // Added by JANR
-	fmt.Println("(10)(9) Path: Skind/pkg/cluster/internal/validate/common.go - Function: validateVolumeType()") // Added by JANR
-	fmt.Println("(10)(9) Brief function goal: Validates the volume type.")                                      // Added by JANR
+	fmt.Println("File(10) Step(9) Path: Skind/pkg/cluster/internal/validate/common.go - Function: validateVolumeType()") // Added by JANR
+	fmt.Println("File(10) Step(9) Brief function goal: Validates the volume type.")                                      // Added by JANR
 	if t != "" && !commons.Contains(supportedTypes, t) {
 		return errors.New(t + ", supported types: " + fmt.Sprint(strings.Join(supportedTypes, ", ")))
 	}

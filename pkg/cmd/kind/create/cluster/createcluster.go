@@ -64,9 +64,9 @@ func NewCommand(logger log.Logger, streams cmd.IOStreams) *cobra.Command {
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
 	// All functions called in order: // Added by JANR
-	fmt.Println("(4)(1) Path: Skind/pkg/cmd/kind/create/cluster/createcluster.go - Function: NewCommand()")                           // Added by JANR
-	fmt.Println("(4)(1) Brief function goal: NewCommand returns a new cobra.Command for cluster creation")                            // Added by JANR
-	fmt.Println("(4)(1) Brief additional information: We have defined all additional flags that are needed for the cluster creation") // Added by JANR
+	fmt.Println("File(4) Step(1) Path: Skind/pkg/cmd/kind/create/cluster/createcluster.go - Function: NewCommand()") // Added by JANR
+	fmt.Println("File(4) Step(1) Brief function goal: NewCommand returns a new cobra.Command for cluster creation")  // Added by JANR
+
 	flags := &flagpole{}
 	cmd := &cobra.Command{
 		Args:  cobra.NoArgs,
@@ -155,8 +155,8 @@ func NewCommand(logger log.Logger, streams cmd.IOStreams) *cobra.Command {
 	)
 
 	// Print the command-line arguments // Added by JANR
-	//fmt.Println("(4)(1) Path: Skind/pkg/cmd/kind/create/cluster/createcluster.go - Print - Args returned by NewCommand()") // Added by JANR
-	//fmt.Println("(4)(1) Command-line arguments:")                                                                          // Added by JANR
+	//fmt.Println("File(4) Step(1) Path: Skind/pkg/cmd/kind/create/cluster/createcluster.go - Print - Args returned by NewCommand()") // Added by JANR
+	//fmt.Println("File(4) Step(1) Command-line arguments:")                                                                          // Added by JANR
 	//for i, arg := range os.Args[1:] {                                                                                      // Added by JANR
 	//	fmt.Printf("Argument %d: %s\n", i+1, arg) // Added by JANR
 	//} // Added by JANR
@@ -169,19 +169,19 @@ func runE(logger log.Logger, streams cmd.IOStreams, flags *flagpole) error {
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
 	// All functions called in order: // Added by JANR
-	fmt.Println("(4)(2) Path: Skind/pkg/cmd/kind/create/cluster/createcluster.go - Function: runE()") // Added by JANR
-	fmt.Println("(4)(2) Brief function goal: runE validates the flags and creates the cluster")       // Added by JANR
+	fmt.Println("File(4) Step(2) Path: Skind/pkg/cmd/kind/create/cluster/createcluster.go - Function: runE()") // Added by JANR
+	fmt.Println("File(4) Step(2) Brief function goal: runE validates the flags and creates the cluster")       // Added by JANR
 
 	err := validateFlags(flags)
 	if err != nil {
 		return err
 	}
-	fmt.Println("(4)(2) - Print - Flags validated") // Added by JANR
+	fmt.Println("File(4) Step(2) - Print - Flags validated") // Added by JANR
 
 	if flags.DescriptorPath == "" {
 		flags.DescriptorPath = clusterDefaultPath
 	}
-	fmt.Println("(4)(2) - Print - Descriptor path set") // Added by JANR
+	fmt.Println("File(4) Step(2) - Print - Descriptor path set") // Added by JANR
 
 	if flags.VaultPassword == "" {
 		flags.VaultPassword, err = setPassword(secretsDefaultPath)
@@ -189,19 +189,19 @@ func runE(logger log.Logger, streams cmd.IOStreams, flags *flagpole) error {
 			return err
 		}
 	}
-	fmt.Println("(4)(2) - Print - Vault password set") // Added by JANR
+	fmt.Println("File(4) Step(2) - Print - Vault password set") // Added by JANR
 
 	keosCluster, clusterConfig, err := commons.GetClusterDescriptor(flags.DescriptorPath)
 	if err != nil {
 		return errors.Wrap(err, "failed to parse cluster descriptor")
 	}
-	fmt.Println("(4)(2) - Print - Cluster descriptor parsed") // Added by JANR
+	fmt.Println("File(4) Step(2) - Print - Cluster descriptor parsed") // Added by JANR
 
 	provider := cluster.NewProvider(
 		cluster.ProviderWithLogger(logger),
 		runtime.GetDefault(logger),
 	)
-	fmt.Println("(4)(2) - Print - Provider created") // Added by JANR
+	fmt.Println("File(4) Step(2) - Print - Provider created") // Added by JANR
 
 	clusterCredentials, err := provider.Validate( // Here we validate the cluster
 		*keosCluster,
@@ -286,9 +286,9 @@ func setPassword(secretsDefaultPath string) (string, error) {
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
 	// All functions called in order: // Added by JANR
-	fmt.Println("(4)(4) Path: Skind/pkg/cmd/kind/create/cluster/createcluster.go - Function: setPassword()") // Added by JANR
-	fmt.Println("(4)(4) Brief function goal: setPassword sets the vault password")                           // Added by JANR
-	fmt.Println("(4)(4) All functions called in order: requestPassword")                                     // Added by JANR
+	fmt.Println("File(4) Step(4) Path: Skind/pkg/cmd/kind/create/cluster/createcluster.go - Function: setPassword()") // Added by JANR
+	fmt.Println("File(4) Step(4) Brief function goal: setPassword sets the vault password")                           // Added by JANR
+	fmt.Println("File(4) Step(4) All functions called in order: requestPassword")                                     // Added by JANR
 	firstPassword, err := requestPassword("Vault Password: ")
 	if err != nil {
 		return "", err
@@ -312,9 +312,9 @@ func requestPassword(request string) (string, error) {
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
 	// All functions called in order: // Added by JANR
-	fmt.Println("(4)(5) Path: Skind/pkg/cmd/kind/create/cluster/createcluster.go - Function: requestPassword()") // Added by JANR
-	fmt.Println("(4)(5) Brief function goal: requestPassword requests the password")                             // Added by JANR
-	fmt.Println("(4)(5) All functions called in order: term.ReadPassword")                                       // Added by JANR
+	fmt.Println("File(4) Step(5) Path: Skind/pkg/cmd/kind/create/cluster/createcluster.go - Function: requestPassword()") // Added by JANR
+	fmt.Println("File(4) Step(5) Brief function goal: requestPassword requests the password")                             // Added by JANR
+	fmt.Println("File(4) Step(5) All functions called in order: term.ReadPassword")                                       // Added by JANR
 	fmt.Print(request)
 	bytePassword, err := term.ReadPassword(int(syscall.Stdin))
 	if err != nil {
@@ -329,8 +329,8 @@ func validateFlags(flags *flagpole) error {
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
 	// All functions called in order: // Added by JANR
-	fmt.Println("(4)(3) Path: Skind/pkg/cmd/kind/create/cluster/createcluster.go - Function: validateFlags()") // Added by JANR
-	fmt.Println("(4)(3) Brief function goal: validateFlags validates the flags for the cluster creation")      // Added by JANR
+	fmt.Println("File(4) Step(3) Path: Skind/pkg/cmd/kind/create/cluster/createcluster.go - Function: validateFlags()") // Added by JANR
+	fmt.Println("File(4) Step(3) Brief function goal: validateFlags validates the flags for the cluster creation")      // Added by JANR
 	count := 0
 	if flags.AvoidCreation {
 		count++

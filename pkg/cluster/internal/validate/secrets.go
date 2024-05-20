@@ -34,8 +34,8 @@ func validateCredentials(params ValidateParams) (commons.ClusterCredentials, err
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
 	// All functions called in order: // Added by JANR
-	fmt.Println("(8)(1) Path: Skind/pkg/cluster/internal/validate/secrets.go - Function: validateCredentials()")                                                                                         // Added by JANR
-	fmt.Println("(8)(1) Brief function goal: Validates the credentials using the validateProviderCredentials, validateRegistryCredentials, validateHelmCredentials, and validateGithubToken functions.") // Added by JANR
+	fmt.Println("File(8) Step(1) Path: Skind/pkg/cluster/internal/validate/secrets.go - Function: validateCredentials()")                                                                                         // Added by JANR
+	fmt.Println("File(8) Step(1) Brief function goal: Validates the credentials using the validateProviderCredentials, validateRegistryCredentials, validateHelmCredentials, and validateGithubToken functions.") // Added by JANR
 
 	var secrets commons.Secrets
 	var creds commons.ClusterCredentials
@@ -74,8 +74,8 @@ func validateCredentials(params ValidateParams) (commons.ClusterCredentials, err
 }
 
 func validateProviderCredentials(secrets interface{}, params ValidateParams) (map[string]string, error) {
-	fmt.Println("(8)(2) Path: Skind/pkg/cluster/internal/validate/secrets.go - Function: validateProviderCredentials()") // Added by JANR
-	fmt.Println("(8)(2) Brief function goal: Validates the provider credentials.")                                       // Added by JANR
+	fmt.Println("File(8) Step(2) Path: Skind/pkg/cluster/internal/validate/secrets.go - Function: validateProviderCredentials()") // Added by JANR
+	fmt.Println("File(8) Step(2) Brief function goal: Validates the provider credentials.")                                       // Added by JANR
 	infraProvider := params.KeosCluster.Spec.InfraProvider
 	credentialsProvider, err := reflections.GetField(secrets, strings.ToUpper(infraProvider))
 	if err != nil || reflect.DeepEqual(credentialsProvider, reflect.Zero(reflect.TypeOf(credentialsProvider)).Interface()) {
@@ -94,13 +94,13 @@ func validateProviderCredentials(secrets interface{}, params ValidateParams) (ma
 	resultCredsMap := structs.Map(credentialsProvider)
 	resultCreds := convertToMapStringString(resultCredsMap)
 	// Print the resultCreds // Added by JANR
-	fmt.Println("(8)(2) - Print - resultCreds: ", resultCreds) // Added by JANR
+	fmt.Println("File(8) Step(2) - Print - resultCreds: ", resultCreds) // Added by JANR
 	return resultCreds, nil
 }
 
 func validateRegistryCredentials(secrets commons.Secrets, spec commons.KeosSpec) (map[string]string, []map[string]interface{}, error) {
-	fmt.Println("(8)(3) Path: Skind/pkg/cluster/internal/validate/secrets.go  - Function: validateRegistryCredentials()") // Added by JANR
-	fmt.Println("(8)(3) Brief function goal: Validates the registry credentials.")                                        // Added by JANR
+	fmt.Println("File(8) Step(3) Path: Skind/pkg/cluster/internal/validate/secrets.go  - Function: validateRegistryCredentials()") // Added by JANR
+	fmt.Println("File(8) Step(3) Brief function goal: Validates the registry credentials.")                                        // Added by JANR
 	var dockerRegistries []commons.DockerRegistryCredentials
 	var resultKeosRegistry map[string]string
 	var resultDockerRegistries = []map[string]interface{}{}
@@ -114,26 +114,26 @@ func validateRegistryCredentials(secrets commons.Secrets, spec commons.KeosSpec)
 	keosCount := 0
 	for i, dockerRegistry := range spec.DockerRegistries {
 		// Check if there are more than one docker_registry with the same URL
-		fmt.Println("(8)(3) - Print - checking if there are more than one docker_registry with the same URL") // Added by JANR
+		fmt.Println("File(8) Step(3) - Print - checking if there are more than one docker_registry with the same URL") // Added by JANR
 		for j, dockerRegistry2 := range spec.DockerRegistries {
 			if i != j && dockerRegistry.URL == dockerRegistry2.URL {
 				return nil, nil, errors.New("there is more than one docker_registry with the same URL: " + dockerRegistry.URL)
 			}
 		}
 		if dockerRegistry.AuthRequired {
-			fmt.Println("(8)(3) - Print - If dockerRegistry.AuthRequired is true") // Added by JANR
+			fmt.Println("File(8) Step(3) - Print - If dockerRegistry.AuthRequired is true") // Added by JANR
 			existCredentials := false
 			for l, dockerRegistryCredential := range dockerRegistries {
 				// Check if there are more than one credential for the same registry
 				for k, dockerRegistryCredential2 := range dockerRegistries {
-					fmt.Println("(8)(3) - Print - checking if there are more than one credential for the same registry") // Added by JANR
+					fmt.Println("File(8) Step(3) - Print - checking if there are more than one credential for the same registry") // Added by JANR
 					if l != k && dockerRegistryCredential.URL == dockerRegistryCredential2.URL {
 						return nil, nil, errors.New("there is more than one credential for the registry: " + dockerRegistry.URL)
 					}
 				}
 				// Check if there are valid credentials for the registry
 				if dockerRegistryCredential.URL == dockerRegistry.URL {
-					fmt.Println("(8)(3) - Print - checking if there are valid credentials for the registry") // Added by JANR
+					fmt.Println("File(8) Step(3) - Print - checking if there are valid credentials for the registry") // Added by JANR
 					existCredentials = true
 					err := validateStruct(dockerRegistryCredential)
 					if err != nil {

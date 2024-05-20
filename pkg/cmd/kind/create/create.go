@@ -34,8 +34,9 @@ func NewCommand(logger log.Logger, streams cmd.IOStreams) *cobra.Command {
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
 	// All functions called in order: // Added by JANR
-	fmt.Println("(3)(1) Path: Skind/pkg/cmd/kind/create/create.go - Function: NewCommand()")               // Added by JANR
-	fmt.Println("(3)(1) Brief function goal: NewCommand returns a new cobra.Command for cluster creation") // Added by JANR
+	fmt.Println("File(3) Step(1) Path: Skind/pkg/cmd/kind/create/create.go - Function: NewCommand()")               // Added by JANR
+	fmt.Println("File(3) Step(1) Brief function goal: NewCommand returns a new cobra.Command for cluster creation") // Added by JANR
+
 	cmd := &cobra.Command{
 		Args:  cobra.NoArgs,
 		Use:   "create",

@@ -49,11 +49,11 @@ func NewCommand(logger log.Logger, streams cmd.IOStreams) *cobra.Command {
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
 	// All functions called in order: // Added by JANR
-	fmt.Println("(2)(1) Path: Skind/pkg/cmd/kind/root.go - Function: NewCommand()")                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       // Added by JANR
-	fmt.Println("(2)(1) Brief function goal: NewCommand returns a new cobra.Command implementing the root command for kind")                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              // Added by JANR
-	fmt.Println("(2)(1) All functions called in order: &flagpole{}, cmd := &cobra.Command{}, cmd.SetOut(streams.Out), cmd.SetErr(streams.ErrOut), cmd.PersistentFlags().StringVar(), cmd.PersistentFlags().Int32VarP(), cmd.PersistentFlags().BoolVarP(), cmd.AddCommand(build.NewCommand(logger, streams)), cmd.AddCommand(completion.NewCommand(logger, streams)), cmd.AddCommand(create.NewCommand(logger, streams)), cmd.AddCommand(delete.NewCommand(logger, streams)), cmd.AddCommand(export.NewCommand(logger, streams)), cmd.AddCommand(get.NewCommand(logger, streams)), cmd.AddCommand(version.NewCommand(logger, streams)), cmd.AddCommand(load.NewCommand(logger, streams))") // Added by JANR
-	flags := &flagpole{}                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  // This is a struct that holds the flags for the command	// Added by JANR
-	cmd := &cobra.Command{                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                // This is the root command for the kind command	// Added by JANR
+	fmt.Println("File(2) Step(1) Path: Skind/pkg/cmd/kind/root.go - Function: NewCommand()")                                                    // Added by JANR
+	fmt.Println("File(2) Step(1) Brief function goal: NewCommand returns a new cobra.Command implementing the root command for cloud-provider") // Added by JANR
+
+	flags := &flagpole{}   // This is a struct that holds the flags for the command	// Added by JANR
+	cmd := &cobra.Command{ // This is the root command for the kind command	// Added by JANR
 		Args:  cobra.NoArgs,                                                                            // This is the number of arguments the command expects	// Added by JANR
 		Use:   "cloud-provisioner",                                                                     // This is the name of the command	// Added by JANR
 		Short: "cloud-provisioner is a tool for managing local Kubernetes clusters",                    // This is a short description of the command	// Added by JANR
@@ -98,9 +98,9 @@ func NewCommand(logger log.Logger, streams cmd.IOStreams) *cobra.Command {
 	cmd.AddCommand(load.NewCommand(logger, streams))
 
 	// Print the command-line arguments // Added by JANR
-	fmt.Println("(2)(1) Path: Skind/pkg/cmd/kind/root.go - Args returned by NewCommand()") // Added by JANR
-	fmt.Println("(2)(1) Command-line arguments:")                                          // Added by JANR
-	for i, arg := range os.Args[1:] {                                                      // Added by JANR
+	fmt.Println("File(2) Step(1) Path: Skind/pkg/cmd/kind/root.go - Args returned by NewCommand()") // Added by JANR
+	fmt.Println("File(2) Step(1) Command-line arguments:")                                          // Added by JANR
+	for i, arg := range os.Args[1:] {                                                               // Added by JANR
 		fmt.Printf("Argument %d: %s\n", i+1, arg) // Added by JANR
 	} // Added by JANR
 	return cmd

@@ -398,8 +398,8 @@ func GetClusterDescriptor(descriptorPath string) (*KeosCluster, *ClusterConfig, 
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
 	// All functions called in order: // Added by JANR
-	fmt.Println("(5)(1) Path: Skind/pkg/commons/cluster.go - Function: GetClusterDescriptor()")
-	fmt.Println("(5)(1) Brief function goal: Read descriptor file")
+	fmt.Println("File(5) Step(1) Path: Skind/pkg/commons/cluster.go - Function: GetClusterDescriptor()")
+	fmt.Println("File(5) Step(1) Brief function goal: Read descriptor file")
 
 	var keosCluster KeosCluster
 	var clusterConfig ClusterConfig
@@ -424,7 +424,7 @@ func GetClusterDescriptor(descriptorPath string) (*KeosCluster, *ClusterConfig, 
 	for _, manifest := range descriptorManifests {
 		var resource Resource
 		err = yaml.Unmarshal([]byte(manifest), &resource)
-		fmt.Println("(5)(1) -Print - resource: ", resource) // Added by JANR
+		fmt.Println("File(5) Step(1) -Print - resource: ", resource) // Added by JANR
 		if err != nil {
 			return nil, nil, err
 		}
@@ -448,7 +448,7 @@ func GetClusterDescriptor(descriptorPath string) (*KeosCluster, *ClusterConfig, 
 				}
 
 				keosCluster.Metadata.Namespace = "cluster-" + keosCluster.Metadata.Name
-				fmt.Println("(5)(1) - Print - keosCluster initialized: ", keosCluster) // Added by JANR
+				fmt.Println("File(5) Step(1) - Print - keosCluster initialized: ", keosCluster) // Added by JANR
 			case "ClusterConfig":
 				findClusterConfig = true
 				clusterConfig.Spec = new(ClusterConfigSpec).Init()
@@ -462,7 +462,7 @@ func GetClusterDescriptor(descriptorPath string) (*KeosCluster, *ClusterConfig, 
 					return nil, nil, err
 				}
 				clusterConfig.Metadata.Namespace = "cluster-" + keosCluster.Metadata.Name
-				fmt.Println("(5)(1) - Print - clusterConfig initialized: ", clusterConfig) // Added by JANR
+				fmt.Println("File(5) Step(1) - Print - clusterConfig initialized: ", clusterConfig) // Added by JANR
 			default:
 				return nil, nil, errors.New("Unsupported manifest kind: " + resource.Kind)
 			}
@@ -494,8 +494,8 @@ func DecryptFile(filePath string, vaultPassword string) (string, error) {
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
 	// All functions called in order: // Added by JANR
-	fmt.Println("(5)(3) Path: Skind/pkg/commons/cluster.go - Function: DecryptFile")
-	fmt.Println("(5)(3) Brief function goal: Decrypt the vault file")
+	fmt.Println("File(5) Step(3) Path: Skind/pkg/commons/cluster.go - Function: DecryptFile")
+	fmt.Println("File(5) Step(3) Brief function goal: Decrypt the vault file")
 	data, err := vault.DecryptFile(filePath, vaultPassword)
 
 	if err != nil {
@@ -509,8 +509,8 @@ func GetSecretsFile(secretsPath string, vaultPassword string) (*SecretsFile, err
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
 	// All functions called in order: // Added by JANR
-	fmt.Println("(5)(2) Path: Skind/pkg/commons/cluster.go - Function: GetSecretsFile")
-	fmt.Println("(5)(2) Brief function goal: Get the secrets file")
+	fmt.Println("File(5) Step(2) Path: Skind/pkg/commons/cluster.go - Function: GetSecretsFile")
+	fmt.Println("File(5) Step(2) Brief function goal: Get the secrets file")
 	secretRaw, err := DecryptFile(secretsPath, vaultPassword)
 	var secretFile SecretsFile
 	if err != nil {
@@ -523,7 +523,7 @@ func GetSecretsFile(secretsPath string, vaultPassword string) (*SecretsFile, err
 		return nil, err
 	}
 	// Print secretFile:	// Added by JANR
-	fmt.Println("(5)(2) - Print - secretFile: ", secretFile) // Added by JANR
+	fmt.Println("File(5) Step(2) - Print - secretFile: ", secretFile) // Added by JANR
 	return &secretFile, nil
 }
 
