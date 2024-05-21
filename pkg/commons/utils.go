@@ -312,8 +312,8 @@ func AWSGetConfig(ctx context.Context, secrets map[string]string, region string)
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
 	// All functions called in order: // Added by JANR
-	fmt.Println("(11)(1) Path: Skind/pkg/cluster/internal/validate/utils.go - Function: AWSGetConfig()") // Added by JANR
-	fmt.Println("(11)(1) Brief function goal: Get AWS configuration.")                                   // Added by JANR
+	fmt.Println("File(11) Step(1) Path: Skind/pkg/cluster/internal/validate/utils.go - Function: AWSGetConfig()") // Added by JANR
+	fmt.Println("File(11) Step(1) Brief function goal: Get AWS configuration.")                                   // Added by JANR
 	customProvider := credentials.NewStaticCredentialsProvider(
 		secrets["AccessKey"], secrets["SecretKey"], "",
 	)
@@ -326,7 +326,7 @@ func AWSGetConfig(ctx context.Context, secrets map[string]string, region string)
 		return aws.Config{}, err
 	}
 	// Print information in different lines: // Added by JANR
-	fmt.Println("(11)(1) - Print - AWS Config: (usage aws sdk-go-v2) ", cfg) // Added by JANR
+	fmt.Println("File(11) Step(1) - Print - AWS Config: (usage aws sdk-go-v2) ", cfg) // Added by JANR
 	return cfg, nil
 }
 
@@ -335,8 +335,8 @@ func AWSIsPrivateSubnet(ctx context.Context, svc *ec2.Client, subnetID *string) 
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
 	// All functions called in order: // Added by JANR
-	fmt.Println("(11)(2) Path: Skind/pkg/cluster/internal/validate/utils.go - Function: AWSIsPrivateSubnet()") // Added by JANR
-	fmt.Println("(11)(2) Brief function goal: Check if subnet is private.")                                    // Added by JANR
+	fmt.Println("File(11) Step(2) Path: Skind/pkg/cluster/internal/validate/utils.go - Function: AWSIsPrivateSubnet()") // Added by JANR
+	fmt.Println("File(11) Step(2) Brief function goal: Check if subnet is private.")                                    // Added by JANR
 	keyname := "association.subnet-id"
 	drtInput := &ec2.DescribeRouteTablesInput{
 		Filters: []types.Filter{
@@ -372,8 +372,8 @@ func AWSGetPrivateAZs(ctx context.Context, svc *ec2.Client, subnets []Subnets) (
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
 	// All functions called in order: // Added by JANR
-	fmt.Println("(11)(2) Path: Skind/pkg/cluster/internal/validate/utils.go - Function: AWSGetPrivateAZs()") // Added by JANR
-	fmt.Println("(11)(2) Brief function goal: Get private availability zones.")                              // Added by JANR
+	fmt.Println("File(11) Step(3) Path: Skind/pkg/cluster/internal/validate/utils.go - Function: AWSGetPrivateAZs()") // Added by JANR
+	fmt.Println("File(11) Step(3) Brief function goal: Get private availability zones.")                              // Added by JANR
 	var azs []string
 	for _, s := range subnets {
 		isPrivate, err := AWSIsPrivateSubnet(ctx, svc, &s.SubnetId)
@@ -405,8 +405,8 @@ func AWSGetAZs(ctx context.Context, svc *ec2.Client) ([]string, error) {
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
 	// All functions called in order: // Added by JANR
-	fmt.Println("(11)(3) Path: Skind/pkg/cluster/internal/validate/utils.go - Function: AWSGetAZs()") // Added by JANR
-	fmt.Println("(11)(3) Brief function goal: Get availability zones.")                               // Added by JANR
+	fmt.Println("File(11) Step(5) Path: Skind/pkg/cluster/internal/validate/utils.go - Function: AWSGetAZs()") // Added by JANR
+	fmt.Println("File(11) Step(5) Brief function goal: Get availability zones.")                               // Added by JANR
 	var azs []string
 	result, err := svc.DescribeAvailabilityZones(ctx, &ec2.DescribeAvailabilityZonesInput{}) // aws sdk-go-v2	// Added by JANR
 	if err != nil {

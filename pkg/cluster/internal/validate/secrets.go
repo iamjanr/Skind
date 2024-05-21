@@ -33,7 +33,6 @@ func validateCredentials(params ValidateParams) (commons.ClusterCredentials, err
 	// Print information in different lines: // Added by JANR
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
-	// All functions called in order: // Added by JANR
 	fmt.Println("File(8) Step(1) Path: Skind/pkg/cluster/internal/validate/secrets.go - Function: validateCredentials()")                                                                                         // Added by JANR
 	fmt.Println("File(8) Step(1) Brief function goal: Validates the credentials using the validateProviderCredentials, validateRegistryCredentials, validateHelmCredentials, and validateGithubToken functions.") // Added by JANR
 

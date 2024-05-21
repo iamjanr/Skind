@@ -33,7 +33,6 @@ func Cluster(params *ValidateParams) (commons.ClusterCredentials, error) {
 	// Print information in different lines: // Added by JANR
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
-	// All functions called in order: // Added by JANR
 	fmt.Println("File(7) Step(1) Path: Skind/pkg/cluster/internal/validate/validate.go - Function: Cluster()") // Added by JANR
 	fmt.Println("File(7) Step(1) Brief function goal: Validates the credentials using the validateCredentials function.")
 	fmt.Println("File(7) Step(1) Brief function goal: If a ClusterConfig is provided, it extracts the Spec from it.")

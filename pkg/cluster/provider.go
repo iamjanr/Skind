@@ -267,6 +267,12 @@ func (p *Provider) CollectLogs(name, dir string) error {
 }
 
 func (p *Provider) Validate(keosCluster commons.KeosCluster, clusterConfig *commons.ClusterConfig, secretsPath string, vaultPassword string) (commons.ClusterCredentials, error) {
+	// Print information in different lines: // Added by JANR
+	// Relative path: // Added by JANR
+	// Brief function goal: // Added by JANR
+	fmt.Println("File(6) Step(2) Path: Skind/pkg/cluster/provider.go - Function: Validate()")                                            // Added by JANR
+	fmt.Println("File(6) Step(2) Brief function goal: Calls the internalvalidate.Cluster function to validate the cluster credentials.") // Added by JANR
+
 	params := &internalvalidate.ValidateParams{
 		KeosCluster:   keosCluster,
 		ClusterConfig: clusterConfig,

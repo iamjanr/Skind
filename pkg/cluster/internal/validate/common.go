@@ -273,7 +273,6 @@ func validateVolumeType(t string, supportedTypes []string) error {
 	// Print information in different lines: // Added by JANR
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
-	// All functions called in order: // Added by JANR
 	fmt.Println("File(10) Step(9) Path: Skind/pkg/cluster/internal/validate/common.go - Function: validateVolumeType()") // Added by JANR
 	fmt.Println("File(10) Step(9) Brief function goal: Validates the volume type.")                                      // Added by JANR
 	if t != "" && !commons.Contains(supportedTypes, t) {
