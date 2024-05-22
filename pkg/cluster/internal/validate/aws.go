@@ -470,8 +470,8 @@ func validateAWSLabel(l string) error {
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
 	// All functions called in order: // Added by JANR
-	fmt.Println("File(12) Step(4) Path: Skind/pkg/cluster/internal/validate/aws.go - Function: validateAWSLabel()") // Added by JANR
-	fmt.Println("File(12) Step(4) Brief function goal: Validates the AWS label format.")                            // Added by JANR
+	fmt.Println("File(12) Step(7) Path: Skind/pkg/cluster/internal/validate/aws.go - Function: validateAWSLabel()") // Added by JANR
+	fmt.Println("File(12) Step(7) Brief function goal: Validates the AWS label format.")                            // Added by JANR
 	var isLabel = regexp.MustCompile(`^([\w\.\/-]+=[\w\.\/-]+)(\s?,\s?[\w\.\/-]+=[\w\.\/-]+)*$`).MatchString        // example: key1=value1,key2=value2 // Added by JANR
 	if !isLabel(l) {
 		return errors.New("incorrect format. Must have the format 'key1=value1,key2=value2'")
@@ -484,8 +484,8 @@ func validateAWSAZs(ctx context.Context, cfg aws.Config, spec commons.KeosSpec) 
 	// Relative path: // Added by JANR
 	// Brief function goal: // Added by JANR
 	// All functions called in order: // Added by JANR
-	fmt.Println("File(12) Step(4) Path: Skind/pkg/cluster/internal/validate/aws.go - Function: validateAWSAZs()") // Added by JANR
-	fmt.Println("File(12) Step(4) Brief function goal: Validates the AWS Availability Zones.")                    // Added by JANR
+	fmt.Println("File(12) Step(6) Path: Skind/pkg/cluster/internal/validate/aws.go - Function: validateAWSAZs()") // Added by JANR
+	fmt.Println("File(12) Step(6) Brief function goal: Validates the AWS Availability Zones.")                    // Added by JANR
 	var err error
 	var azs []string
 

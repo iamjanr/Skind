@@ -426,11 +426,13 @@ func GetClusterDescriptor(descriptorPath string) (*KeosCluster, *ClusterConfig, 
 		err = yaml.Unmarshal([]byte(manifest), &resource)
 		fmt.Println("File(5) Step(1) -Print - resource: ", resource) // Added by JANR
 		if err != nil {
+			fmt.Println("File(5) Step(1) - Print - Unmarshal error: ", err) // Added by JANR
 			return nil, nil, err
 		}
 		if !reflect.DeepEqual(resource, Resource{}) {
 			err = validate.Struct(resource)
 			if err != nil {
+				fmt.Println("File(5) Step(1) - Print - validate.Struct(resource): ", err) // Added by JANR
 				return nil, nil, err
 			}
 
@@ -439,11 +441,13 @@ func GetClusterDescriptor(descriptorPath string) (*KeosCluster, *ClusterConfig, 
 				keosCluster.Spec = new(KeosSpec).Init()
 				err = yaml.Unmarshal([]byte(manifest), &keosCluster)
 				if err != nil {
+					fmt.Println("File(5) Step(1) - Print - Unmarshal error: ", err) // Added by JANR
 					return nil, nil, err
 				}
 
 				err = validate.Struct(keosCluster)
 				if err != nil {
+					fmt.Println("File(5) Step(1) - Print - validate.Struct(keosCluster): ", err) // Added by JANR
 					return nil, nil, err
 				}
 
@@ -454,11 +458,13 @@ func GetClusterDescriptor(descriptorPath string) (*KeosCluster, *ClusterConfig, 
 				clusterConfig.Spec = new(ClusterConfigSpec).Init()
 				err = yaml.Unmarshal([]byte(manifest), &clusterConfig)
 				if err != nil {
+					fmt.Println("File(5) Step(1) - Print - Unmarshal error: ", err) // Added by JANR
 					return nil, nil, err
 				}
 
 				err = validate.Struct(clusterConfig)
 				if err != nil {
+					fmt.Println("File(5) Step(1) - Print - validate.Struct(clusterConfig): ", err) // Added by JANR
 					return nil, nil, err
 				}
 				clusterConfig.Metadata.Namespace = "cluster-" + keosCluster.Metadata.Name
@@ -474,7 +480,7 @@ func GetClusterDescriptor(descriptorPath string) (*KeosCluster, *ClusterConfig, 
 	}
 
 	if !findClusterConfig {
-		fmt.Println("(5) - Print - ClusterConfig not found, creating a new one") // Added by JANR
+		fmt.Println("File(5) Step(1) - Print - ClusterConfig not found, creating a new one") // Added by JANR
 		clusterConfig = ClusterConfig{}
 		clusterConfig.APIVersion = "installer.stratio.com/v1beta1"
 		clusterConfig.Kind = "ClusterConfig"
