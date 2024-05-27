@@ -82,7 +82,7 @@ capz-role-restricted-aks  Microsoft.Authorization/roleDefinitions  Restricted ro
 >> Role: capz-aks-role-controlplane
 ```bash
 # Get json permissions
-❯ az role definition list --name "capz-aks-role-controlplane
+❯ az role definition list --name "capz-aks-role-controlplane"
 ```
 
 > capz-aks-agp-restricted
