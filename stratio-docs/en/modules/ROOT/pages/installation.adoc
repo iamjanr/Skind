@@ -537,6 +537,14 @@ spec:
       quantity: 3
       size: t3.medium
       az: eu-west-1c
+---
+apiVersion: installer.stratio.com/v1beta1
+kind: ClusterConfig
+metadata:
+    name: eks-prod-config
+spec:
+    cluster_operator_version: 0.3.0
+    cluster_operator_image_version: 0.3.0
 ----
 
 ==== AWS unmanaged
@@ -645,6 +653,14 @@ spec:
       node_image: ami-0de933c15c9b49fb5
       size: t3.medium
       az: eu-west-1c
+---
+apiVersion: installer.stratio.com/v1beta1
+kind: ClusterConfig
+metadata:
+    name: aws-prod-config
+spec:
+    cluster_operator_version: 0.3.0
+    cluster_operator_image_version: 0.3.0
 ----
 
 ==== GCP
@@ -747,6 +763,14 @@ spec:
       size: c2d-highcpu-4
       az: europe-west4-a
       node_image: projects/gcp-prod/global/images/ubuntu-2204-v1-26-8-1679997686
+---
+apiVersion: installer.stratio.com/v1beta1
+kind: ClusterConfig
+metadata:
+    name: gcp-prod-config
+spec:
+    cluster_operator_version: 0.3.0
+    cluster_operator_image_version: 0.3.0
 ----
 
 ==== Azure unmanaged
@@ -825,6 +849,14 @@ spec:
       root_volume:
         size: 100
         type: StandardSSD_LRS
+---
+apiVersion: installer.stratio.com/v1beta1
+kind: ClusterConfig
+metadata:
+    name: azure-prod-config
+spec:
+    cluster_operator_version: 0.3.0
+    cluster_operator_image_version: 0.3.0
 ----
 
 ==== AKS
@@ -891,6 +923,14 @@ spec:
       root_volume:
         size: 50
         type: Managed
+---
+apiVersion: installer.stratio.com/v1beta1
+kind: ClusterConfig
+metadata:
+    name: aks-prod-config
+spec:
+    cluster_operator_version: 0.3.0
+    cluster_operator_image_version: 0.3.0
 ----
 
 == Creation of the cluster
