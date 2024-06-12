@@ -479,7 +479,7 @@ spec:
       account_id: '3683675..'
       secret_key: wq3/Vsc..
     github_token: github_pat_11APW..
-  k8s_version: v1.26.7
+  k8s_version: v1.28.1
   region: eu-west-1
   external_domain: domain.ext
   networks:
@@ -581,7 +581,7 @@ spec:
       account_id: '3683675..'
       secret_key: wq3/Vsc..
     github_token: github_pat_11APW..
-  k8s_version: v1.26.7
+  k8s_version: v1.28.1
   region: eu-west-1
   external_domain: domain.ext
   networks:
@@ -707,7 +707,7 @@ spec:
       - url: keosregistry.stratio.com/keos
         user: "myuser"
         pass: "mypass"
-  k8s_version: v1.26.8
+  k8s_version: v1.28.1
   region: europe-west4
   docker_registries:
       - url: eosregistry.azurecr.io/keos
@@ -806,7 +806,7 @@ spec:
       client_secret: lSF8Q~n..
       subscription_id: '6e2a38cd-e..'
       tenant_id: '9c2f8eb6-5..'
-  k8s_version: v1.26.8
+  k8s_version: v1.28.1
   region: westeurope
   docker_registries:
     - url: eosregistry.azurecr.io/keos
@@ -887,7 +887,7 @@ spec:
       client_secret: lSF8Q~n..
       subscription_id: '6e2a38cd-e..'
       tenant_id: '9c2f8eb6-5..'
-  k8s_version: v1.26.6
+  k8s_version: v1.28.1
   region: westeurope
   docker_registries:
     - url: eosregistry.azurecr.io/keos
