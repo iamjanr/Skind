@@ -36,7 +36,7 @@ For deployments on the Google Cloud Platform, you will require permissions on co
 +
 ** xref:attachment$stratio-gcp-permissions.list[Download permissions for GCP].
 
-In the case of GKE, in addition to the above permissions, additional permissions will be required for the creation of _clusters_.
+In the case of GKE, in addition to the above permissions, additional permissions will be required to create clusters.
 ** xref:attachment$stratio-gke-permissions.list[Download permissions for GKE]
 
 * Certified operating systems
