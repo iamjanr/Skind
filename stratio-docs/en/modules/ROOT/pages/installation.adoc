@@ -36,6 +36,10 @@ For deployments on the Google Cloud Platform, you will require permissions on co
 +
 ** xref:attachment$stratio-gcp-permissions.list[Download permissions for GCP].
 
+
+In the case of GKE, in addition to the above permissions, additional permissions will be required for the creation of _clusters_.
+** xref:attachment$stratio-gke-permissions.list[Download permissions for GKE]
+
 * Certified operating systems
 +
 For unmanaged GCP environments use https://github.com/kubernetes-sigs/image-builder/tree/master/images/capi[image builder], an official tool to create and make images available for _Stratio KEOS_. For more details on image building see the xref:operations-manual:image-builder/gcp-image-builder.adoc[guide for GCP].
