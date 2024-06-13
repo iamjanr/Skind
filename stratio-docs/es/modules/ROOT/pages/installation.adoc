@@ -36,7 +36,7 @@ Para los despliegues en Google Cloud Platform no gestionado se necesitarán prin
 +
 ** xref:attachment$stratio-gcp-permissions.list[Descargar permisos para GCP]
 
-En el caso de GKE, además de los permisos anteriores, se necesitarán permisos adicionales para la creación de _clusters_.
+En el caso de GKE, además de los permisos anteriores se necesitarán permisos adicionales para la creación de _clusters_.
 ** xref:attachment$stratio-gke-permissions.list[Descargar permisos para GKE]
 
 * Sistemas operativos certificados
