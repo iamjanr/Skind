@@ -1,4 +1,0 @@
-# GKE Permissions
-Administrador de clústeres de Kubernetes Engine (Role)
-Administrador de Kubernetes Engine (Role)
-iam.serviceAccounts.getAccessToken
