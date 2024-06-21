@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.17.0-0.5.1 (2024-06-19)
+## 0.17.0-0.5.1 (upcomig)
 
 * [Core] Ensure that keoscluster exists in the upgrade script
 * [Core] Fix clusterctl move retries
