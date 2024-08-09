@@ -631,6 +631,40 @@ func (a *action) Execute(ctx *actions.ActionContext) error {
 			}
 		}
 
+		if awsEKSEnabled && a.clusterConfig.Spec.EKSLBController {
+			ctx.Status.Start("Installing AWS LB controller in workload cluster ⚖️")
+			defer ctx.Status.End(false)
+			err = installLBController(n, kubeconfigPath, privateParams, providerParams)
+
+			if err != nil {
+				return errors.Wrap(err, "failed to install AWS LB controller in workload cluster")
+			}
+			ctx.Status.End(true) // End Installing AWS LB controller in workload cluster
+		}
+
+		if awsEKSEnabled {
+			c = "kubectl --kubeconfig " + kubeconfigPath + " get clusterrole aws-node -o jsonpath='{.rules}'"
+			awsnoderules, err := commons.ExecuteCommand(n, c, 5)
+			if err != nil {
+				return errors.Wrap(err, "failed to get aws-node clusterrole rules")
+			}
+			var rules []json.RawMessage
+			err = json.Unmarshal([]byte(awsnoderules), &rules)
+			if err != nil {
+				return errors.Wrap(err, "failed to parse aws-node clusterrole rules")
+			}
+			rules = append(rules, json.RawMessage(`{"apiGroups": [""],"resources": ["pods"],"verbs": ["patch"]}`))
+			newawsnoderules, err := json.Marshal(rules)
+			if err != nil {
+				return errors.Wrap(err, "failed to marshal aws-node clusterrole rules")
+			}
+			c = "kubectl --kubeconfig " + kubeconfigPath + " patch clusterrole aws-node -p '{\"rules\": " + string(newawsnoderules) + "}'"
+			_, err = commons.ExecuteCommand(n, c, 5)
+			if err != nil {
+				return errors.Wrap(err, "failed to patch aws-node clusterrole")
+			}
+		}
+
 		// Apply custom CoreDNS configuration
 		if a.keosCluster.Spec.Dns.Forwarders != nil && len(a.keosCluster.Spec.Dns.Forwarders) > 0 && (!awsEKSEnabled || !gcpGKEEnabled) {
 			ctx.Status.Start("Customizing CoreDNS configuration 🪡")
@@ -682,40 +716,6 @@ func (a *action) Execute(ctx *actions.ActionContext) error {
 			return errors.Wrap(err, "failed to configure StorageClass in workload cluster")
 		}
 		ctx.Status.End(true) // End Installing StorageClass in workload cluster
-
-		if awsEKSEnabled && a.clusterConfig.Spec.EKSLBController {
-			ctx.Status.Start("Installing AWS LB controller in workload cluster ⚖️")
-			defer ctx.Status.End(false)
-			err = installLBController(n, kubeconfigPath, privateParams, providerParams)
-
-			if err != nil {
-				return errors.Wrap(err, "failed to install AWS LB controller in workload cluster")
-			}
-			ctx.Status.End(true) // End Installing AWS LB controller in workload cluster
-		}
-
-		if awsEKSEnabled {
-			c = "kubectl --kubeconfig " + kubeconfigPath + " get clusterrole aws-node -o jsonpath='{.rules}'"
-			awsnoderules, err := commons.ExecuteCommand(n, c, 5)
-			if err != nil {
-				return errors.Wrap(err, "failed to get aws-node clusterrole rules")
-			}
-			var rules []json.RawMessage
-			err = json.Unmarshal([]byte(awsnoderules), &rules)
-			if err != nil {
-				return errors.Wrap(err, "failed to parse aws-node clusterrole rules")
-			}
-			rules = append(rules, json.RawMessage(`{"apiGroups": [""],"resources": ["pods"],"verbs": ["patch"]}`))
-			newawsnoderules, err := json.Marshal(rules)
-			if err != nil {
-				return errors.Wrap(err, "failed to marshal aws-node clusterrole rules")
-			}
-			c = "kubectl --kubeconfig " + kubeconfigPath + " patch clusterrole aws-node -p '{\"rules\": " + string(newawsnoderules) + "}'"
-			_, err = commons.ExecuteCommand(n, c, 5)
-			if err != nil {
-				return errors.Wrap(err, "failed to patch aws-node clusterrole")
-			}
-		}
 
 		ctx.Status.End(true) // End Enabling workload cluster's self-healing
 
