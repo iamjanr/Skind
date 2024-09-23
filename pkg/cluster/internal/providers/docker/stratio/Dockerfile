@@ -97,4 +97,5 @@ RUN curl -L  https://github.com/kubernetes-sigs/cluster-api/releases/download/${
     && cp ${CAPI_REPO}/cluster-api/${CLUSTERCTL}/metadata.yaml ${CAPI_REPO}/control-plane-kubeadm/${CLUSTERCTL}/metadata.yaml
 
 # Modify GCP infrastructure components
+RUN sed -i "/machinepools\/status/{n;N;N;N;s/.*/  verbs:\n  - get\n  - list\n  - watch\n  - update\n  - patch/}" ${CAPI_REPO}/infrastructure-gcp/${CAPG}/infrastructure-components.yaml    
 RUN sed -i "/insecure-diagnostics/a \        - --sync-period=2m" ${CAPI_REPO}/infrastructure-gcp/${CAPG}/infrastructure-components.yaml
