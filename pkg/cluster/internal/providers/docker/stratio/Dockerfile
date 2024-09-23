@@ -29,10 +29,6 @@ ENV CAPA=v2.2.1
 ENV CAPG=v1.6.1
 ENV CAPZ=v1.11.4
 
-# Modify GCP infrastructure components
-ENV SEARCH_STRING="machinepools\/status"
-ENV FILE=${CAPI_REPO}/infrastructure-gcp/${CAPG}/infrastructure-components.yaml
-
 # Install vim
 RUN apt-get update && apt-get install -y \
   vim python3-pip git \
@@ -100,5 +96,5 @@ RUN curl -L  https://github.com/kubernetes-sigs/cluster-api/releases/download/${
     && cp ${CAPI_REPO}/cluster-api/${CLUSTERCTL}/metadata.yaml ${CAPI_REPO}/bootstrap-kubeadm/${CLUSTERCTL}/metadata.yaml \
     && cp ${CAPI_REPO}/cluster-api/${CLUSTERCTL}/metadata.yaml ${CAPI_REPO}/control-plane-kubeadm/${CLUSTERCTL}/metadata.yaml
 
-# Run the sed command to modify the file
-RUN sed -i "/$SEARCH_STRING/{n;N;N;N;s/.*/  verbs:\n  - get\n  - list\n  - watch\n  - update\n  - patch/}" $FILE    
+# Modify GCP infrastructure components
+RUN sed -i "/machinepools\/status/{n;N;N;N;s/.*/  verbs:\n  - get\n  - list\n  - watch\n  - update\n  - patch/}" ${CAPI_REPO}/infrastructure-gcp/${CAPG}/infrastructure-components.yaml    
