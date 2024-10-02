@@ -353,6 +353,18 @@ func (a *action) Execute(ctx *actions.ActionContext) error {
 		return errors.Wrap(err, "failed to write the allow-all-egress network policy")
 	}
 
+	// Apply the local file using kubectl
+	localFile := "infrastructure.cluster.x-k8s.io_gcpmanagedcontrolplanes.yaml"
+	destPath := "/root/.cluster-api/local-repository/infrastructure-gcp/v1.6.1/"
+
+	// Copy the local file to the container
+	applyCmd := `kubectl apply -f ` + destPath + localFile
+
+	_, err = commons.ExecuteCommand(n, applyCmd, 5)
+	if err != nil {
+		return err
+	}
+
 	ctx.Status.Start("Installing keos cluster operator 💻")
 	defer ctx.Status.End(false)
 
@@ -717,7 +729,7 @@ func (a *action) Execute(ctx *actions.ActionContext) error {
 			return errors.Wrap(err, "failed to enable workload cluster's self-healing")
 		}
 
-		ctx.Status.End(true) // End Enabling workload cluster's self-healing		
+		ctx.Status.End(true) // End Enabling workload cluster's self-healing
 
 		// Use Calico as network policy engine in managed systems
 		if provider.capxProvider != "azure" {
