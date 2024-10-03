@@ -18,8 +18,6 @@ limitations under the License.
 package kubeadminit
 
 import (
-	"fmt"
-	"os"
 	"strings"
 
 	"sigs.k8s.io/kind/pkg/errors"
@@ -54,35 +52,6 @@ func (a *action) Execute(ctx *actions.ActionContext) error {
 		return err
 	}
 
-	// get the target node for this task
-	// TODO: eliminate the concept of bootstrapcontrolplane node entirely
-	// outside this method
-	node, err := nodeutils.BootstrapControlPlaneNode(allNodes)
-	if err != nil {
-		return err
-	}
-
-	// Get the current working directory
-	cwd, err := os.Getwd()
-	if err != nil {
-		fmt.Printf("Error getting current working directory: %v\n", err)
-	}
-
-	// Define the local file and destination path
-	localFile := cwd + "/infrastructure.cluster.x-k8s.io_gcpmanagedcontrolplanes.yaml"
-	destPath := "/root/.cluster-api/local-repository/infrastructure-gcp/v1.6.1/"
-	containerName := node.String()
-
-	// Construct the docker cp command
-	osCommand := fmt.Sprintf("docker cp %s %s:%s", localFile, containerName, destPath)
-
-	// Execute the command
-	cmd := exec.Command("sh", "-c", osCommand)
-	if err := cmd.Run(); err != nil {
-		fmt.Printf("Error running command: %s\n", err)
-		return err
-	}
-
 	// skip preflight checks, as these have undesirable side effects
 	// and don't tell us much. requires kubeadm 1.13+
 	skipPhases := "preflight"
@@ -91,7 +60,7 @@ func (a *action) Execute(ctx *actions.ActionContext) error {
 	}
 
 	// run kubeadm
-	cmd = node.Command(
+	cmd := node.Command(
 		// init because this is the control plane node
 		"kubeadm", "init",
 		"--skip-phases="+skipPhases,
