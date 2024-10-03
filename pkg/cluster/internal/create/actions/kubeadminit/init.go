@@ -52,6 +52,14 @@ func (a *action) Execute(ctx *actions.ActionContext) error {
 		return err
 	}
 
+	// get the target node for this task
+	// TODO: eliminate the concept of bootstrapcontrolplane node entirely
+	// outside this method
+	node, err := nodeutils.BootstrapControlPlaneNode(allNodes)
+	if err != nil {
+		return err
+	}
+
 	// skip preflight checks, as these have undesirable side effects
 	// and don't tell us much. requires kubeadm 1.13+
 	skipPhases := "preflight"
