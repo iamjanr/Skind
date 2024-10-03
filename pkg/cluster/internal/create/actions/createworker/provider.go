@@ -363,25 +363,15 @@ func (p *Provider) deployClusterOperator(n nodes.Node, privateParams PrivatePara
 			keosCluster.Spec.ControlPlane.AWS = commons.AWSCP{}
 		}
 		if keosCluster.Spec.InfraProvider == "gcp" && keosCluster.Spec.ControlPlane.Managed {
-			fmt.Println("GCP managed")
-
-			// Debugging output
-			fmt.Println("ClusterNetwork:", keosCluster.Spec.ControlPlane.ClusterNetwork)
-			if keosCluster.Spec.ControlPlane.ClusterNetwork != nil {
-				fmt.Println("PrivateCluster:", keosCluster.Spec.ControlPlane.ClusterNetwork.PrivateCluster)
-			} else {
-				fmt.Println("ClusterNetwork is nil")
-			}
-
 			// Ensure ClusterNetwork is initialized
 			if keosCluster.Spec.ControlPlane.ClusterNetwork == nil {
-				fmt.Println("Initializing ClusterNetwork")
+				//	fmt.Println("Initializing ClusterNetwork")
 				keosCluster.Spec.ControlPlane.ClusterNetwork = &commons.ClusterNetwork{}
 			}
 
 			// Ensure PrivateCluster is initialized
 			if keosCluster.Spec.ControlPlane.ClusterNetwork.PrivateCluster == nil {
-				fmt.Println("Initializing PrivateCluster")
+				//	fmt.Println("Initializing PrivateCluster")
 				keosCluster.Spec.ControlPlane.ClusterNetwork.PrivateCluster = &commons.PrivateCluster{}
 			}
 
