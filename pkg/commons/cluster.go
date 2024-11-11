@@ -190,7 +190,6 @@ type PrivateCluster struct {
 	// +kubebuilder:default=true
 	EnablePrivateEndpoint *bool `yaml:"enable_private_endpoint,omitempty"`
 	// +kubebuilder:default=true
-	EnablePrivateNodes    bool   `yaml:"enable_private_nodes,omitempty"`
 	ControlPlaneCidrBlock string `yaml:"control_plane_cidr_block,omitempty"`
 }
 
