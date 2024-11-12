@@ -39,7 +39,7 @@ var isGCPNodeImage = regexp.MustCompile(`^projects/[\w-]+/global/images/[\w-]+$`
 var GCPNodeImageFormat = "projects/[PROJECT_ID]/global/images/[IMAGE_NAME]"
 
 // Regex for private CIDR Control Plane and Master Authorized Networks
-var GCPCPPrivatePattern = `^(10\.\d{1,3}\.\d{1,3}\.\d{1,3}\/[0-9]{1,2})$|^(172\.(1[6-9]|2[0-9]|3[0-1])\.\d{1,3}\.\d{1,3}\/[0-9]{1,2})$|^(192\.168\.\d{1,3}\.\d{1,3}\/[0-9]{1,2}/28)$`
+var GCPCPPrivatePattern = `^(10\.\d{1,3}\.\d{1,3}\.\d{1,3}\/28)$|^(172\.(1[6-9]|2[0-9]|3[0-1])\.\d{1,3}\.\d{1,3}\/28)$|^(192\.168\.\d{1,3}\.\d{1,3}\/28)$`
 var GCPMANPrivatePattern = `^(10\.\d{1,3}\.\d{1,3}\.\d{1,3}\/[0-9]{1,2})$|^(172\.(1[6-9]|2[0-9]|3[0-1])\.\d{1,3}\.\d{1,3}\/[0-9]{1,2})$|^(192\.168\.\d{1,3}\.\d{1,3}\/[0-9]{1,2})$`
 var GCPControlPlaneCidrBlock = regexp.MustCompile(GCPCPPrivatePattern).MatchString
 var GCPMANCIDRBlock = regexp.MustCompile(GCPMANPrivatePattern).MatchString
