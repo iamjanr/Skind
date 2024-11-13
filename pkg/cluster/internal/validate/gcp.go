@@ -123,19 +123,26 @@ func validateGCP(spec commons.KeosSpec, providerSecrets map[string]string) error
 	}
 
 	if spec.ControlPlane.Managed {
-		if *spec.ControlPlane.Gcp.ClusterNetwork.PrivateCluster.EnablePrivateEndpoint && spec.ControlPlane.Gcp.ClusterNetwork.PrivateCluster.ControlPlaneCidrBlock == "" {
-			return errors.New("ControlPlaneCidrBlock is required when EnablePrivateEndpoint is true")
-		}
-		if spec.ControlPlane.Gcp.ClusterNetwork.PrivateCluster.ControlPlaneCidrBlock != "" {
-			// Check format with regex
-			if !GCPControlPlaneCidrBlock(spec.ControlPlane.Gcp.ClusterNetwork.PrivateCluster.ControlPlaneCidrBlock) {
-				return errors.New("ControlPlaneCidrBlock invalid format.\nIt must be a Private CIDR with format: " + GCPCPPrivatePattern)
+		if spec.ControlPlane.Gcp.ClusterNetwork != nil {
+			privateCluster := spec.ControlPlane.Gcp.ClusterNetwork.PrivateCluster
+			if privateCluster != nil {
+				// Verifica si EnablePrivateEndpoint no es nil y procede según su valor
+				if privateCluster.EnablePrivateEndpoint != nil && *privateCluster.EnablePrivateEndpoint && privateCluster.ControlPlaneCidrBlock == "" {
+					return errors.New("ControlPlaneCidrBlock is required when EnablePrivateEndpoint is true")
+				}
+				if privateCluster.ControlPlaneCidrBlock != "" {
+					// Verifica el formato con regex
+					if !GCPControlPlaneCidrBlock(privateCluster.ControlPlaneCidrBlock) {
+						return errors.New("ControlPlaneCidrBlock invalid format.\nIt must be a Private CIDR with format: " + GCPCPPrivatePattern)
+					}
+				}
 			}
-		}
-		if spec.ControlPlane.Gcp.MasterAuthorizedNetworksConfig.CIDRBlocks != nil {
-			for _, block := range spec.ControlPlane.Gcp.MasterAuthorizedNetworksConfig.CIDRBlocks {
-				if !GCPMANCIDRBlock(block.CIDRBlock) {
-					return errors.New("CIDRBlock invalid format.\nIt must be a Private CIDR with format " + GCPMANPrivatePattern)
+			// Validación para MasterAuthorizedNetworksConfig
+			if spec.ControlPlane.Gcp.MasterAuthorizedNetworksConfig != nil && spec.ControlPlane.Gcp.MasterAuthorizedNetworksConfig.CIDRBlocks != nil {
+				for _, block := range spec.ControlPlane.Gcp.MasterAuthorizedNetworksConfig.CIDRBlocks {
+					if !GCPMANCIDRBlock(block.CIDRBlock) {
+						return errors.New("CIDRBlock invalid format.\nIt must be a Private CIDR with format " + GCPMANPrivatePattern)
+					}
 				}
 			}
 		}

@@ -176,14 +176,14 @@ type ControlPlane struct {
 }
 
 type GCPCP struct {
-	ClusterNetwork                 ClusterNetwork                 `yaml:"cluster_network,omitempty"`
-	MasterAuthorizedNetworksConfig MasterAuthorizedNetworksConfig `yaml:"master_authorized_networks_config,omitempty"`
-	MonitoringConfig               MonitoringConfig               `yaml:"monitoring_config,omitempty"`
-	LoggingConfig                  LoggingConfig                  `yaml:"logging_config,omitempty"`
+	ClusterNetwork                 *ClusterNetwork                 `yaml:"cluster_network,omitempty"`
+	MasterAuthorizedNetworksConfig *MasterAuthorizedNetworksConfig `yaml:"master_authorized_networks_config,omitempty"`
+	MonitoringConfig               *MonitoringConfig               `yaml:"monitoring_config,omitempty"`
+	LoggingConfig                  *LoggingConfig                  `yaml:"logging_config,omitempty"`
 }
 
 type ClusterNetwork struct {
-	PrivateCluster PrivateCluster `yaml:"private_cluster,omitempty"`
+	PrivateCluster *PrivateCluster `yaml:"private_cluster,omitempty"`
 }
 
 type PrivateCluster struct {
@@ -502,6 +502,7 @@ func setDefaultValue(s *string, value string) {
 
 // Init sets default values for the Spec
 func (s KeosSpec) Init() KeosSpec {
+
 	highlyAvailable := true
 	s.ControlPlane.HighlyAvailable = &highlyAvailable
 
@@ -521,12 +522,33 @@ func (s KeosSpec) Init() KeosSpec {
 	s.ControlPlane.AWS.Logging.Scheduler = false
 
 	// GKE
-	if s.InfraProvider == "gcp" && s.ControlPlane.Managed {
-		s.ControlPlane.Gcp.ClusterNetwork.PrivateCluster.EnablePrivateEndpoint = ToPtr[bool](true)
-		s.ControlPlane.Gcp.MasterAuthorizedNetworksConfig.GCPPublicCIDRsAccessEnabled = ToPtr[bool](false)
-		s.ControlPlane.Gcp.MonitoringConfig.EnableManagedPrometheus = ToPtr[bool](false)
-		s.ControlPlane.Gcp.LoggingConfig.SystemComponents = ToPtr[bool](false)
-		s.ControlPlane.Gcp.LoggingConfig.Workloads = ToPtr[bool](false)
+	if s.ControlPlane.Gcp.ClusterNetwork == nil {
+		s.ControlPlane.Gcp.ClusterNetwork = &ClusterNetwork{}
+	}
+	if s.ControlPlane.Gcp.ClusterNetwork.PrivateCluster == nil {
+		s.ControlPlane.Gcp.ClusterNetwork.PrivateCluster = &PrivateCluster{}
+	}
+	if s.ControlPlane.Gcp.ClusterNetwork.PrivateCluster.EnablePrivateEndpoint == nil {
+		s.ControlPlane.Gcp.ClusterNetwork.PrivateCluster.EnablePrivateEndpoint = ToPtr(true)
+	}
+	if s.ControlPlane.Gcp.MasterAuthorizedNetworksConfig == nil {
+		s.ControlPlane.Gcp.MasterAuthorizedNetworksConfig = &MasterAuthorizedNetworksConfig{}
+	}
+	if s.ControlPlane.Gcp.MasterAuthorizedNetworksConfig.GCPPublicCIDRsAccessEnabled == nil {
+		s.ControlPlane.Gcp.MasterAuthorizedNetworksConfig.GCPPublicCIDRsAccessEnabled = ToPtr(false)
+	}
+	if s.ControlPlane.Gcp.MonitoringConfig == nil {
+		s.ControlPlane.Gcp.MonitoringConfig = &MonitoringConfig{}
+	}
+	if s.ControlPlane.Gcp.LoggingConfig == nil {
+		s.ControlPlane.Gcp.MonitoringConfig.EnableManagedPrometheus = ToPtr(false)
+	}
+	if s.ControlPlane.Gcp.LoggingConfig == nil {
+		s.ControlPlane.Gcp.LoggingConfig = &LoggingConfig{}
+	}
+	if s.ControlPlane.Gcp.LoggingConfig.SystemComponents == nil {
+		s.ControlPlane.Gcp.LoggingConfig.SystemComponents = ToPtr(false)
+		s.ControlPlane.Gcp.LoggingConfig.Workloads = ToPtr(false)
 	}
 
 	// Helm
