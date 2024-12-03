@@ -136,7 +136,17 @@ type GCPCP struct {
 }
 
 type ClusterNetwork struct {
-	PrivateCluster PrivateCluster `yaml:"private_cluster,omitempty"`
+	PrivateCluster PrivateCluster         `yaml:"private_cluster,omitempty"`
+	Pod            *ClusterNetworkPod     `yaml:"pod,omitempty"`
+	Service        *ClusterNetworkService `yaml:"service,omitempty"`
+}
+
+type ClusterNetworkPod struct {
+	CidrBlock string `yaml:"cidr_block,omitempty"`
+}
+
+type ClusterNetworkService struct {
+	CidrBlock string `yaml:"cidr_block,omitempty"`
 }
 
 type PrivateCluster struct {
@@ -217,6 +227,9 @@ type Security struct {
 	AWS                  struct {
 		CreateIAM bool `yaml:"create_iam" validate:"boolean"`
 	} `yaml:"aws,omitempty"`
+	GCP struct {
+		Scopes []string `yaml:"scopes,omitempty"`
+	} `yaml:"gcp,omitempty"`
 }
 
 type WorkerNodes []struct {
