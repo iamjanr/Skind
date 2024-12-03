@@ -136,17 +136,7 @@ type GCPCP struct {
 }
 
 type ClusterNetwork struct {
-	PrivateCluster PrivateCluster         `yaml:"private_cluster,omitempty"`
-	Pod            *ClusterNetworkPod     `yaml:"pod,omitempty"`
-	Service        *ClusterNetworkService `yaml:"service,omitempty"`
-}
-
-type ClusterNetworkPod struct {
-	CidrBlock string `yaml:"cidr_block,omitempty"`
-}
-
-type ClusterNetworkService struct {
-	CidrBlock string `yaml:"cidr_block,omitempty"`
+	PrivateCluster PrivateCluster `yaml:"private_cluster,omitempty"`
 }
 
 type PrivateCluster struct {
