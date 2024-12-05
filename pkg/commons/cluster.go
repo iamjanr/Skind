@@ -228,6 +228,9 @@ type Security struct {
 	AWS                  struct {
 		CreateIAM bool `yaml:"create_iam" validate:"boolean"`
 	} `yaml:"aws,omitempty"`
+	GCP struct {
+		Scopes []string `yaml:"scopes,omitempty"`
+	} `yaml:"gcp,omitempty"`
 }
 
 type WorkerNodes []struct {
