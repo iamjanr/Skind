@@ -22,6 +22,7 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"fmt"
 	"os"
 	"strings"
 
@@ -195,6 +196,14 @@ func (a *action) Execute(ctx *actions.ActionContext) error {
 
 	ctx.Status.Start("Installing CAPx 🎖️")
 	defer ctx.Status.End(false)
+
+	// Debug information
+	// Print keosCluster spec on human readable format
+	keosClusterSpec, err := json.MarshalIndent(a.keosCluster.Spec, "", "  ")
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal keosCluster spec")
+	}
+	fmt.Println(string(keosClusterSpec))
 
 	helmRegistry.Type = a.keosCluster.Spec.HelmRepository.Type
 	helmRegistry.URL = a.keosCluster.Spec.HelmRepository.URL
