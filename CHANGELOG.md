@@ -3,7 +3,7 @@
 
 ## 0.17.0-0.5.7 (upcoming)
 
-* Bump new release
+* Update capg version
 
 ## 0.17.0-0.5.6 (2024-12-05)
 
