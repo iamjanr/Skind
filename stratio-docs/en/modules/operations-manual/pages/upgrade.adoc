@@ -436,7 +436,7 @@ NOTE: Usa `--type=json` con la operación `add` y path `/spec/worker_nodes/-` pa
 
 . Espera a que los nodos MP estén en estado `Ready`.
 
-. Verifica la capacidad y obtén los comandos de drenado:
+. Verifica la capacidad y obtén las instrucciones de drenado y eliminación:
 +
 [source,bash]
 ----
@@ -444,10 +444,10 @@ python3 migrate-workers-to-machinepool.py \
   --check-ready <nombre>-mp
 ----
 +
-El _script_ imprime los comandos de drenado para cada nodo del grupo MD equivalente.
+El _script_ imprime los comandos de drenado para cada nodo del grupo MD equivalente, y las instrucciones para eliminar la entrada del grupo MD del objeto `KeosCluster`. Revisa las instrucciones antes de ejecutarlas.
 
 . Ejecuta los comandos de drenado que imprime el _script_, uno a uno. Verifica el estado del _cluster_ entre cada nodo.
 
-. Elimina el grupo MD del objeto `KeosCluster` mediante un JSON patch con la operación `remove`, indicando el índice del elemento en el array `worker_nodes`.
+. Sigue las instrucciones que imprime el _script_ para eliminar el grupo MD del objeto `KeosCluster`.
 
 NOTE: No elimines el grupo MD hasta que todos sus nodos estén drenados y el grupo MP tenga capacidad suficiente para absorber la carga de trabajo.
