@@ -244,20 +244,18 @@ El _script_ valida los prerequisitos, activa los _feature gates_ de CAPA (`Machi
 
 Repite los pasos siguientes para cada grupo de nodos que quieras migrar:
 
-. Añade el nuevo grupo MP al descriptor. Omite `node_image` e indica `ami_type` de forma opcional (por defecto `BOTTLEROCKET_x86_64`):
+. Añade el nuevo grupo MP al objeto `KeosCluster`. Omite `node_image` e indica `ami_type` de forma opcional (por defecto `BOTTLEROCKET_x86_64`):
 +
-[source,yaml]
+[source,bash]
 ----
-worker_nodes:
-  - name: <nombre>-mp
-    size: <mismo-size>
-    quantity: <misma-cantidad>
-    az: <misma-az>
-    ami_type: BOTTLEROCKET_x86_64   # opcional
-    labels: {}                       # mismas labels que el grupo MD
+kubectl patch keoscluster <nombre-cluster> -n cluster-<nombre-cluster> \
+  --type=json \
+  -p '[{"op":"add","path":"/spec/worker_nodes/-","value":{"name":"<nombre>-mp","size":"<size>","quantity":<n>,"az":"<az>","min_size":<min>,"max_size":<max>}}]'
 ----
++
+NOTE: Usa `--type=json` con la operación `add` y path `/spec/worker_nodes/-` para añadir el grupo sin reemplazar los existentes. Nunca uses `kubectl apply` sobre el `KeosCluster`.
 
-. Aplica el descriptor con Stratio Cloud Provisioner y espera a que los nodos MP estén en estado `Ready`.
+. Espera a que los nodos MP estén en estado `Ready`.
 
 . Verifica la capacidad y obtén los comandos de drenado:
 +
@@ -271,7 +269,7 @@ El _script_ imprime los comandos de drenado para cada nodo del grupo MD equivale
 
 . Ejecuta los comandos de drenado que imprime el _script_, uno a uno. Verifica el estado del _cluster_ entre cada nodo.
 
-. Elimina el grupo MD del descriptor y aplícalo con Stratio Cloud Provisioner.
+. Elimina el grupo MD del objeto `KeosCluster` mediante un JSON patch con la operación `remove`, indicando el índice del elemento en el array `worker_nodes`.
 
 NOTE: No elimines el grupo MD hasta que todos sus nodos estén drenados y el grupo MP tenga capacidad suficiente para absorber la carga de trabajo.
 
