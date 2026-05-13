@@ -197,72 +197,6 @@ Esto implica que:
 
 WARNING: El _flag_ `--private` solo es necesario si quieres *forzar el uso de repositorios privados* y el `ClusterConfig` actual ya no lo tiene habilitado.
 
-=== _Clusters_ EKS con _MachinePools_
-
-NOTE: Los _MachinePools_ solo están disponibles en _clusters_ creados con esta versión de Stratio Cloud Provisioner. No existe migración automática desde _MachineDeployments_ a _MachinePools_ en _clusters_ existentes. Para migrar un _cluster_ existente, consulta <<_migración_de_machinedeployments_a_machinepools,Migración de _MachineDeployments_ a _MachinePools_>>.
-
-==== Migración de _MachineDeployments_ a _MachinePools_
-
-WARNING: Este procedimiento aplica únicamente a _clusters_ *EKS* (AWS gestionado). No está disponible para Azure VMs ni GKE.
-
-La migración es un proceso asistido y por fases. El _script_ `migrate-workers-to-machinepool.py` prepara el _cluster_ y valida la capacidad antes de cada drenado. Los nodos se migran manualmente, uno a uno, a un ritmo decidido por el operador.
-
-===== Prerequisitos
-
-* cluster-operator >= 0.6.1 y CAPA >= v2.9.2 en el _cluster_.
-* `KeosCluster.status.ready = true`.
-
-Si el _cluster_ tiene versiones anteriores, ejecuta primero `upgrade-provisioner.py` antes de continuar.
-
-===== Fase 1 — Preparación del _cluster_
-
-IMPORTANT: Antes de ejecutar el _script_, verifica que la imagen y el _chart_ de cluster-operator de este release estén disponibles en el registro de contenedores y en el repositorio Helm configurados para el _cluster_. Si el _cluster_ usa registros privados (`private_registry=true` o `private_helm_repo=true`), asegúrate de que los artefactos se han publicado antes de continuar.
-
-Ejecuta el _script_ de preparación dentro del contenedor de Stratio Cloud Provisioner:
-
-[source,bash]
-----
-python3 migrate-workers-to-machinepool.py \
-  --kubeconfig ~/.kube/config
-----
-
-El _script_ usa por defecto la versión de cluster-operator incluida en este release de Stratio Cloud Provisioner. Puedes sobreescribirla con `--cluster-operator-version <versión>` si es necesario.
-
-El _script_ valida los prerequisitos, activa los _feature gates_ de CAPA (`MachinePool=true` y `EKSAllowAddRoles=true`) y actualiza cluster-operator a la versión indicada.
-
-===== Fase 2 — Migración de grupos de nodos
-
-Repite los pasos siguientes para cada grupo de nodos que quieras migrar:
-
-. Añade el nuevo grupo MP al objeto `KeosCluster`. Omite `node_image` e indica `ami_type` de forma opcional (por defecto `BOTTLEROCKET_x86_64`):
-+
-[source,bash]
-----
-kubectl patch keoscluster <nombre-cluster> -n cluster-<nombre-cluster> \
-  --type=json \
-  -p '[{"op":"add","path":"/spec/worker_nodes/-","value":{"name":"<nombre>-mp","size":"<size>","quantity":<n>,"az":"<az>","min_size":<min>,"max_size":<max>}}]'
-----
-+
-NOTE: Usa `--type=json` con la operación `add` y path `/spec/worker_nodes/-` para añadir el grupo sin reemplazar los existentes. Nunca uses `kubectl apply` sobre el `KeosCluster`: cluster-operator detecta la anotación `kubectl.kubernetes.io/last-applied-configuration` que genera el `apply` y salta el ciclo de reconciliación real, por lo que los cambios en `spec.worker_nodes` nunca se procesan.
-
-. Espera a que los nodos MP estén en estado `Ready`.
-
-. Verifica la capacidad y obtén los comandos de drenado:
-+
-[source,bash]
-----
-python3 migrate-workers-to-machinepool.py \
-  --check-ready <nombre>-mp
-----
-+
-El _script_ imprime los comandos de drenado para cada nodo del grupo MD equivalente.
-
-. Ejecuta los comandos de drenado que imprime el _script_, uno a uno. Verifica el estado del _cluster_ entre cada nodo.
-
-. Elimina el grupo MD del objeto `KeosCluster` mediante un JSON patch con la operación `remove`, indicando el índice del elemento en el array `worker_nodes`.
-
-NOTE: No elimines el grupo MD hasta que todos sus nodos estén drenados y el grupo MP tenga capacidad suficiente para absorber la carga de trabajo.
-
 == Uso del _script_ de actualización
 
 === Sintaxis
@@ -451,4 +385,70 @@ kubectl get machinepools -A
 kubectl get nodes
 # Verificar que los logs de CAPX no contengan errores tras la actualización
 ----
+
+== _Clusters_ EKS con _MachinePools_
+
+NOTE: Los _MachinePools_ solo están disponibles en _clusters_ creados con esta versión de Stratio Cloud Provisioner. No existe migración automática desde _MachineDeployments_ a _MachinePools_ en _clusters_ existentes. Para migrar un _cluster_ existente, consulta <<_migración_de_machinedeployments_a_machinepools,Migración de _MachineDeployments_ a _MachinePools_>>.
+
+=== Migración de _MachineDeployments_ a _MachinePools_
+
+WARNING: Este procedimiento aplica únicamente a _clusters_ *EKS* (AWS gestionado). No está disponible para Azure VMs ni GKE.
+
+La migración es un proceso asistido y por fases. El _script_ `migrate-workers-to-machinepool.py` prepara el _cluster_ y valida la capacidad antes de cada drenado. Los nodos se migran manualmente, uno a uno, a un ritmo decidido por el operador.
+
+==== Prerequisitos
+
+* cluster-operator >= 0.6.1 y CAPA >= v2.9.2 en el _cluster_.
+* `KeosCluster.status.ready = true`.
+
+Si el _cluster_ tiene versiones anteriores, ejecuta primero `upgrade-provisioner.py` antes de continuar.
+
+==== Fase 1 — Preparación del _cluster_
+
+IMPORTANT: Antes de ejecutar el _script_, verifica que la imagen y el _chart_ de cluster-operator de este release estén disponibles en el registro de contenedores y en el repositorio Helm configurados para el _cluster_. Si el _cluster_ usa registros privados (`private_registry=true` o `private_helm_repo=true`), asegúrate de que los artefactos se han publicado antes de continuar.
+
+Ejecuta el _script_ de preparación dentro del contenedor de Stratio Cloud Provisioner:
+
+[source,bash]
+----
+python3 migrate-workers-to-machinepool.py \
+  --kubeconfig ~/.kube/config
+----
+
+El _script_ usa por defecto la versión de cluster-operator incluida en este release de Stratio Cloud Provisioner. Puedes sobreescribirla con `--cluster-operator-version <versión>` si es necesario.
+
+El _script_ valida los prerequisitos, activa los _feature gates_ de CAPA (`MachinePool=true` y `EKSAllowAddRoles=true`) y actualiza cluster-operator a la versión indicada.
+
+==== Fase 2 — Migración de grupos de nodos
+
+Repite los pasos siguientes para cada grupo de nodos que quieras migrar:
+
+. Añade el nuevo grupo MP al objeto `KeosCluster`. Omite `node_image` e indica `ami_type` de forma opcional (por defecto `BOTTLEROCKET_x86_64`):
++
+[source,bash]
+----
+kubectl patch keoscluster <nombre-cluster> -n cluster-<nombre-cluster> \
+  --type=json \
+  -p '[{"op":"add","path":"/spec/worker_nodes/-","value":{"name":"<nombre>-mp","size":"<size>","quantity":<n>,"az":"<az>","min_size":<min>,"max_size":<max>}}]'
+----
++
+NOTE: Usa `--type=json` con la operación `add` y path `/spec/worker_nodes/-` para añadir el grupo sin reemplazar los existentes. Nunca uses `kubectl apply` sobre el `KeosCluster`: cluster-operator detecta la anotación `kubectl.kubernetes.io/last-applied-configuration` que genera el `apply` y salta el ciclo de reconciliación real, por lo que los cambios en `spec.worker_nodes` nunca se procesan.
+
+. Espera a que los nodos MP estén en estado `Ready`.
+
+. Verifica la capacidad y obtén los comandos de drenado:
++
+[source,bash]
+----
+python3 migrate-workers-to-machinepool.py \
+  --check-ready <nombre>-mp
+----
++
+El _script_ imprime los comandos de drenado para cada nodo del grupo MD equivalente.
+
+. Ejecuta los comandos de drenado que imprime el _script_, uno a uno. Verifica el estado del _cluster_ entre cada nodo.
+
+. Elimina el grupo MD del objeto `KeosCluster` mediante un JSON patch con la operación `remove`, indicando el índice del elemento en el array `worker_nodes`.
+
+NOTE: No elimines el grupo MD hasta que todos sus nodos estén drenados y el grupo MP tenga capacidad suficiente para absorber la carga de trabajo.
 
