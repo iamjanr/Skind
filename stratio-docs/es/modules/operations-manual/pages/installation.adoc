@@ -532,13 +532,14 @@ En este apartado se indican las particularidades del _control-plane_ de Kubernet
 ^|Nombre ^|Descripción ^|Ejemplo ^|Opcional
 
 |_aws_
-|Valores específicos para el _logging_ de EKS (_API Server, audit, authenticator, controller++_++manager_ y/o _scheduler_).
+|Valores específicos de EKS. Incluye la configuración del _logging_ del _control-plane_ (_API Server, audit, authenticator, controller++_++manager_ y/o _scheduler_). Opcionalmente, incluye el nombre de un rol IAM preexistente para grupos de nodos gestionados (_mp++_++role++_++name_). Si se especifica, _Stratio Cloud Provisioner_ asigna ese rol a todos los grupos de nodos sin crear uno nuevo.
 a|
 
 [source,yaml]
 ----
 logging:
   api_server: true
+mp_role_name: "eks-nodegroup-role"
 ----
 
 |Sí
@@ -613,8 +614,18 @@ Las imágenes utilizadas deberán estar soportadas por EKS. Consulta la https://
 |Sí
 
 |_node++_++image_
-|Imagen de instancia utilizada para los nodos _worker_.
+|Imagen de instancia personalizada para los nodos _worker_. Si se especifica en un _cluster_ EKS gestionado, el grupo de nodos se crea como _MachineDeployment_ (nodo EC2 autogestionado). Mutuamente exclusivo con _ami++_++type_.
 |ami-0de933c15c9b49fb5
+|Sí
+
+|_ami++_++type_
+|Tipo de AMI para el grupo de nodos gestionado por EKS (_MachinePool_). Solo válido con _control-plane_ gestionado. Si no se especifica, se usa _BOTTLEROCKET_x86_64_ por defecto. Mutuamente exclusivo con _node++_++image_.
+|BOTTLEROCKET_x86_64
+|Sí
+
+|_spot_
+|Activa el uso de instancias _spot_ en el grupo de nodos. Permite reducir costes a cambio de mayor riesgo de interrupción.
+|true
 |Sí
 
 |_labels_
@@ -667,6 +678,8 @@ root_volume:
 
 NOTE: Se ha implementado la opción de establecer un _min++_++size_ igual a cero, lo que permite que el autoescalado pueda incrementar o disminuir el número de nodos hasta alcanzar cero según sea necesario. Esta funcionalidad proporciona un ahorro significativo de costes en comparación con versiones anteriores, ya que permite la definición de un grupo de _workers_ sin instanciar ningún recurso en el proveedor _cloud_ que no sea necesario.
 
+NOTE: En _clusters_ EKS con _control-plane_ gestionado, el tipo de grupo de nodos depende del campo _node++_++image_. Si está presente, se crea un _MachineDeployment_ (EC2 autogestionado). Si no está presente, se crea un _MachinePool_ (grupo gestionado por EKS). Un _cluster_ puede combinar ambos tipos. Para escalar un _MachinePool_ a cero réplicas, _max++_++size_ debe ser mayor o igual al número de zonas de disponibilidad del _cluster_.
+
 === _Stratio KEOS_
 
 Los parámetros para la fase del _keos-installer_ se indicarán en este apartado.
@@ -700,8 +713,11 @@ En este ejemplo se pueden ver las siguientes particularidades:
 * Uso de VPC y _subnets_ personalizadas (creadas anteriormente). Este apartado es opcional.
 * Definición de una _StorageClass_ por defecto. Este apartado es opcional.
 * Se habilitan los _logs_ del _API Server_ en EKS.
+* Uso de grupos de nodos gestionados por EKS (_MachinePool_): los grupos sin _node++_++image_ se crean como _MachinePools_ con AMI gestionada por EKS.
+* Rol IAM preexistente para los grupos de nodos (_mp++_++role++_++name_): _Stratio Cloud Provisioner_ lo asigna sin crear uno nuevo.
 * Grupos de nodos _worker_ con múltiples casuísticas:
 ** Diferentes tipos de instancia.
+** Con _ami++_++type_ explícito (_BOTTLEROCKET_x86_64_) y con AMI por defecto.
 ** Con clave SSH.
 ** Con etiquetas de K8s.
 ** Con rangos de autoescalado.
@@ -762,6 +778,7 @@ spec:
     aws:
       logging:
         api_server: true
+      mp_role_name: "eks-nodegroup-role"
     managed: true
   worker_nodes:
     - name: eks-prod-xlarge
@@ -769,6 +786,7 @@ spec:
       max_size: 18
       min_size: 6
       size: m6i.xlarge
+      ami_type: BOTTLEROCKET_x86_64
       labels:
         disktype: standard
       root_volume:
