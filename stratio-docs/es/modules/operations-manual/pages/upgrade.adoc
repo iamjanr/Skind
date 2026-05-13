@@ -201,16 +201,6 @@ WARNING: El _flag_ `--private` solo es necesario si quieres *forzar el uso de re
 
 NOTE: Los _MachinePools_ solo están disponibles en _clusters_ creados con esta versión de Stratio Cloud Provisioner. No existe migración automática desde _MachineDeployments_ a _MachinePools_ en _clusters_ existentes. Para migrar un _cluster_ existente, consulta <<_migración_de_machinedeployments_a_machinepools,Migración de _MachineDeployments_ a _MachinePools_>>.
 
-==== _MachineDeployments_ (con _node++_++image_)
-
-La imagen de nodo es fija. Al cambiar _k8s++_++version_ en el descriptor, solo se actualiza el _control-plane_. Para actualizar los nodos de tipo _MachineDeployment_:
-
-. Obtén el identificador de la AMI para la nueva versión de Kubernetes en la región del _cluster_.
-. Actualiza el campo _node++_++image_ de cada grupo afectado en el descriptor.
-. Aplica el descriptor actualizado con Stratio Cloud Provisioner.
-
-NOTE: Si no actualizas _node++_++image_, los nodos de tipo _MachineDeployment_ mantienen la versión de _kubelet_ de la AMI anterior. El _control-plane_ puede estar en una versión superior a la de esos nodos.
-
 ==== Migración de _MachineDeployments_ a _MachinePools_
 
 WARNING: Este procedimiento aplica únicamente a _clusters_ *EKS* (AWS gestionado). No está disponible para Azure VMs ni GKE.
