@@ -403,6 +403,21 @@ La migración es un proceso asistido y por fases. El _script_ `migrate-workers-t
 
 Si el _cluster_ tiene versiones anteriores, ejecuta primero `upgrade-provisioner.py` antes de continuar.
 
+==== Levantar el contenedor
+
+El _script_ de migración se ejecuta dentro del mismo contenedor que el _upgrade_. Desde el directorio de trabajo que contiene `secrets.yml` y `.kube/config`:
+
+[source,bash]
+----
+docker run \
+  --name cloud-provisioner-upgrade-0.8.X \
+  --net host \
+  -it \
+  -v $PWD/secrets.yml:/upgrade/secrets.yml \
+  -v $PWD/.kube/config:/upgrade/.kube/config \
+  cloud-provisioner-upgrade:0.17.0-0.8.X
+----
+
 ==== Fase 1 — Preparación del _cluster_
 
 IMPORTANT: Antes de ejecutar el _script_, verifica que la imagen y el _chart_ de cluster-operator de este release estén disponibles en el registro de contenedores y en el repositorio Helm configurados para el _cluster_. Si el _cluster_ usa registros privados (`private_registry=true` o `private_helm_repo=true`), asegúrate de que los artefactos se han publicado antes de continuar.
