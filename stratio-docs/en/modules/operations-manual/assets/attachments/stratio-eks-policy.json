@@ -168,6 +168,17 @@
               "ec2:GetInstanceTypesFromInstanceRequirements"
           ],
           "Resource": "*"
+      },
+      {
+          "Sid": "CAPAManagedPolicies",
+          "Effect": "Allow",
+          "Action": [
+              "iam:CreatePolicyVersion",
+              "iam:DeletePolicyVersion"
+          ],
+          "Resource": [
+              "arn:aws:iam::${AWS_ACCOUNT_ID}:policy/*"
+          ]
       }
   ]
 }
