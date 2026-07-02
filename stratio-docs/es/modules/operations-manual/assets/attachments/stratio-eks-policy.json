@@ -153,6 +153,35 @@
               "autoscaling:DeleteTags"
           ],
           "Resource": "arn:aws:autoscaling:*:${AWS_ACCOUNT_ID}:autoScalingGroup:*:autoScalingGroupName/*"
+      },
+      {
+          "Sid": "CAPAManagedNodegroups",
+          "Effect": "Allow",
+          "Action": [
+              "eks:CreateNodegroup",
+              "eks:DescribeNodegroup",
+              "eks:DeleteNodegroup"
+          ],
+          "Resource": [
+              "arn:aws:eks:*:${AWS_ACCOUNT_ID}:cluster/*",
+              "arn:aws:eks:*:${AWS_ACCOUNT_ID}:nodegroup/*/*/*"
+          ]
+      },
+      {
+          "Sid": "CAPAManagedNodegroupsAutoScalingRead",
+          "Effect": "Allow",
+          "Action": [
+              "autoscaling:DescribeAutoScalingGroups"
+          ],
+          "Resource": "*"
+      },
+      {
+          "Sid": "CAPAManagedNodegroupServiceLinkedRole",
+          "Effect": "Allow",
+          "Action": [
+              "iam:CreateServiceLinkedRole"
+          ],
+          "Resource": "arn:aws:iam::${AWS_ACCOUNT_ID}:role/aws-service-role/eks-nodegroup.amazonaws.com/AWSServiceRoleForAmazonEKSNodegroup"
       }
   ]
 }
