@@ -715,8 +715,9 @@ This example includes:
 * Use of VPC and custom subnets (pre-created; optional).
 * Default _StorageClass_ defined (optional).
 * Enabled API Server logs in EKS.
-* Uso de grupos de nodos gestionados por EKS (_MachinePool_): los grupos sin _node++_++image_ se crean como _MachinePools_ con AMI gestionada por EKS.
-* Rol IAM preexistente para los grupos de nodos (_mp++_++role++_++name_): _Stratio Cloud Provisioner_ lo asigna sin crear uno nuevo.
+* Use of EKS-managed node groups (_MachinePool_): groups without _node++_++image_ are created as _MachinePools_ with EKS-managed AMI.
+* Pre-existing IAM role for node groups (_mp++_++role++_++name_): _Stratio Cloud Provisioner_ assigns it without creating a new one.
+* Mixed cluster with EKS-managed groups (_MachinePool_) and custom AMI groups (_MachineDeployment_): the group with _node++_++image_ is created as a _MachineDeployment_ (self-managed EC2).
 * Worker node groups with multiple configurations:
 ** Different instance types.
 ** With explicit _ami++_++type_ (_BOTTLEROCKET_x86_64_) and default AMI.
@@ -798,6 +799,8 @@ spec:
       ssh_key: stg-key
     - name: eks-prod-medium-spot
       quantity: 4
+      min_size: 4
+      max_size: 8
       zone_distribution: unbalanced
       size: t3.medium
       spot: true
@@ -805,8 +808,18 @@ spec:
         disktype: standard
     - name: eks-prod-medium-az
       quantity: 3
+      min_size: 3
+      max_size: 6
       size: t3.medium
       az: eu-west-1c
+    - name: eks-prod-custom-ami
+      quantity: 2
+      max_size: 6
+      min_size: 2
+      size: m6i.large
+      node_image: "ami-0a1234567890abcde"
+      labels:
+        workload: custom
 ----
 
 ==== GKE

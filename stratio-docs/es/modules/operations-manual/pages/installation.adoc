@@ -715,6 +715,7 @@ En este ejemplo se pueden ver las siguientes particularidades:
 * Se habilitan los _logs_ del _API Server_ en EKS.
 * Uso de grupos de nodos gestionados por EKS (_MachinePool_): los grupos sin _node++_++image_ se crean como _MachinePools_ con AMI gestionada por EKS.
 * Rol IAM preexistente para los grupos de nodos (_mp++_++role++_++name_): _Stratio Cloud Provisioner_ lo asigna sin crear uno nuevo.
+* Coexistencia de grupos gestionados (_MachinePool_) y grupos con AMI personalizada (_MachineDeployment_): el grupo con _node++_++image_ se crea como _MachineDeployment_ (EC2 autogestionado).
 * Grupos de nodos _worker_ con múltiples casuísticas:
 ** Diferentes tipos de instancia.
 ** Con _ami++_++type_ explícito (_BOTTLEROCKET_x86_64_) y con AMI por defecto.
@@ -796,6 +797,8 @@ spec:
       ssh_key: stg-key
     - name: eks-prod-medium-spot
       quantity: 4
+      min_size: 4
+      max_size: 8
       zone_distribution: unbalanced
       size: t3.medium
       spot: true
@@ -803,8 +806,18 @@ spec:
         disktype: standard
     - name: eks-prod-medium-az
       quantity: 3
+      min_size: 3
+      max_size: 6
       size: t3.medium
       az: eu-west-1c
+    - name: eks-prod-custom-ami
+      quantity: 2
+      max_size: 6
+      min_size: 2
+      size: m6i.large
+      node_image: "ami-0a1234567890abcde"
+      labels:
+        workload: custom
 ----
 
 ==== GKE
