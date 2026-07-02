@@ -12,6 +12,8 @@ For automated provisioning in EKS, actions must be performed across multiple ser
 ** xref:attachment$stratio-aws-temp-policy.json[Download temporary permissions for EKS].
 +
 To deploy EKS, you must manually create the "AWSServiceRoleForAmazonEKS" role and attach the "AmazonEKSServiceRolePolicy" (which is created by default in AWS).
++
+NOTE: Si el _cluster_ incluye grupos de tipo _MachinePool_ (nodegroups gestionados por EKS), el usuario de despliegue necesita permisos adicionales: `eks:CreateNodegroup`, `eks:DescribeNodegroup`, `eks:DeleteNodegroup`, `autoscaling:DescribeAutoScalingGroups` e `iam:CreateServiceLinkedRole`. Ya están incluidos en `stratio-eks-policy.json`.
 
 * Certified operating systems
 +

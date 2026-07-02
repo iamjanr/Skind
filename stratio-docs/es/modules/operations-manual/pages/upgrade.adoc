@@ -400,6 +400,7 @@ La migración es un proceso asistido y por fases. El _script_ `migrate-workers-t
 
 * cluster-operator >= 0.6.1 y CAPA >= v2.9.2 en el _cluster_.
 * `KeosCluster.status.ready = true`.
+* La política EKS del usuario de despliegue debe incluir los permisos de gestión de nodegroups de `stratio-eks-policy.json` (`eks:CreateNodegroup`, `eks:DescribeNodegroup`, `eks:DeleteNodegroup`, `autoscaling:DescribeAutoScalingGroups`, `iam:CreateServiceLinkedRole`).
 
 Si el _cluster_ tiene versiones anteriores, ejecuta primero `upgrade-provisioner.py` antes de continuar.
 
