@@ -4,9 +4,9 @@ These are the highlights of the _Stratio Cloud Provisioner_ versions for the lat
 
 == 0.17.0-0.8.X
 
-* Soporte de _MachinePools_ en _clusters_ EKS con _control-plane_ gestionado. Los grupos de nodos sin _node++_++image_ se aprovisionan ahora como grupos de nodos gestionados por EKS (_AWSManagedMachinePool_) en lugar de instancias EC2 autogestionadas. Un _cluster_ puede combinar ambos tipos en el mismo descriptor.
-* Nuevo campo _ami++_++type_ en _worker++_++nodes_ para seleccionar el tipo de AMI del grupo de nodos gestionado. El valor por defecto es _BOTTLEROCKET_x86_64_.
-* Nuevo campo _mp++_++role++_++name_ en _control_plane.aws_ para asignar un rol IAM preexistente a todos los grupos de nodos gestionados, sin que _Stratio Cloud Provisioner_ cree uno nuevo.
+* Support for _MachinePools_ in EKS clusters with managed _control-plane_. Node groups without _node++_++image_ are now provisioned as EKS-managed node groups (_AWSManagedMachinePool_) instead of self-managed EC2 instances. A cluster can combine both types in the same descriptor.
+* New _ami++_++type_ field in _worker++_++nodes_ to select the AMI type of the managed node group. The default value is "BOTTLEROCKET++_++x86++_++64".
+* New _mp++_++role++_++name_ field in _control_plane.aws_ to assign a pre-existing IAM role to all managed node groups, without _Stratio Cloud Provisioner_ creating a new one.
 
 == 0.17.0-0.6 (Nov 15, 2024)
 
