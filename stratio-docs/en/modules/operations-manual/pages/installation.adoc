@@ -13,7 +13,7 @@ For automated provisioning in EKS, actions must be performed across multiple ser
 +
 To deploy EKS, you must manually create the "AWSServiceRoleForAmazonEKS" role and attach the "AmazonEKSServiceRolePolicy" (which is created by default in AWS).
 +
-NOTE: Si el _cluster_ incluye grupos de tipo _MachinePool_ (nodegroups gestionados por EKS), el usuario de despliegue necesita permisos adicionales: `eks:CreateNodegroup`, `eks:DescribeNodegroup`, `eks:DeleteNodegroup`, `autoscaling:DescribeAutoScalingGroups` e `iam:CreateServiceLinkedRole`. Ya están incluidos en `stratio-eks-policy.json`.
+NOTE: If the cluster includes _MachinePool_-type groups (EKS-managed nodegroups), the deployment user needs additional permissions: `eks:CreateNodegroup`, `eks:DescribeNodegroup`, `eks:DeleteNodegroup`, `autoscaling:DescribeAutoScalingGroups`, and `iam:CreateServiceLinkedRole`. These permissions are already included in the _stratio-eks-policy.json_ file.
 
 * Certified operating systems
 +
@@ -41,7 +41,6 @@ In GKE, the service account used to provision clusters must have the following s
 In GKE, the default operating system is Container-Optimized OS (COS), and no specific image needs to be specified.
 
 * Enable the Google Kubernetes Engine API for GKE.
-
 * Bastion.
 +
 To deploy _Stratio KEOS_ on GKE, you need a bastion to facilitate communication with the cluster. Create it on the same network as the cluster.
@@ -535,7 +534,7 @@ This section specifies _control-plane_ particulars.
 ^|Name ^|Description ^|Example ^|Optional
 
 |_aws_
-|Valores específicos de EKS. Incluye la configuración del _logging_ del _control-plane_ (_API Server, audit, authenticator, controller++_++manager_ y/o _scheduler_). Opcionalmente, incluye el nombre de un rol IAM preexistente para grupos de nodos gestionados (_mp++_++role++_++name_). Si se especifica, _Stratio Cloud Provisioner_ asigna ese rol a todos los grupos de nodos sin crear uno nuevo.
+|EKS-specific values. Includes the _control-plane_ logging configuration ("api", "audit", "authenticator", "controllerManager", or "scheduler"). Optionally, it includes the name of a pre-existing IAM role for the managed node groups (_mp++_++role++_++name_). If specified, _Stratio Cloud Provisioner_ assigns that role to all node groups without creating a new one.
 a|
 
 [source,yaml]
@@ -555,7 +554,6 @@ a|
 ----
 cluster_network:
   private_cluster:
-
 
 master_authorized_networks_config:
 
@@ -618,17 +616,17 @@ EKS must support the images used. See the https://docs.aws.amazon.com/es_es/eks/
 |Yes
 
 |_node++_++image_
-|Imagen de instancia personalizada para los nodos _worker_. Si se especifica en un _cluster_ EKS gestionado, el grupo de nodos se crea como _MachineDeployment_ (nodo EC2 autogestionado). Mutuamente exclusivo con _ami++_++type_.
+|Custom instance image for the _worker_ nodes. If specified in a managed EKS cluster, the node group is created as a _MachineDeployment_ (self-managed EC2 node). It is mutually exclusive with _ami++_++type_.
 |ami-0de933c15c9b49fb5
 |Yes
 
 |_ami++_++type_
-|Tipo de AMI para el grupo de nodos gestionado por EKS (_MachinePool_). Solo válido con _control-plane_ gestionado. Si no se especifica, se usa _BOTTLEROCKET_x86_64_ por defecto. Mutuamente exclusivo con _node++_++image_.
+|AMI type for the EKS-managed node group (_MachinePool_). Only valid with managed _control-plane_. If not specified, "BOTTLEROCKET++_++x86++_++64" is used by default. It is mutually exclusive with _node++_++image_.
 |BOTTLEROCKET_x86_64
 |Yes
 
 |_spot_
-|Activa el uso de instancias _spot_ en el grupo de nodos. Permite reducir costes a cambio de mayor riesgo de interrupción.
+|Enables the use of _spot_ instances in the node group. It reduces costs at the expense of a higher risk of interruption.
 |true
 |Yes
 
@@ -682,7 +680,7 @@ root_volume:
 
 NOTE: Setting _min++_++size_ to zero is supported, allowing the autoscaler to scale down to zero nodes, which can save costs, particularly for groups with zero deployed instances when not needed.
 
-NOTE: En _clusters_ EKS con _control-plane_ gestionado, el tipo de grupo de nodos depende del campo _node++_++image_. Si está presente, se crea un _MachineDeployment_ (EC2 autogestionado). Si no está presente, se crea un _MachinePool_ (grupo gestionado por EKS). Un _cluster_ puede combinar ambos tipos. Para escalar un _MachinePool_ a cero réplicas, _max++_++size_ debe ser mayor o igual al número de zonas de disponibilidad del _cluster_.
+NOTE: On EKS clusters with managed _control-plane_, the node group type depends on the _node++_++image_ field. If present, a _MachineDeployment_ (self-managed EC2) is created. If not present, a _MachinePool_ (EKS-managed group) is created. A cluster can combine both types. To scale a _MachinePool_ to zero replicas, _max++_++size_ must be greater than or equal to the number of availability zones in the cluster.
 
 === _Stratio KEOS_
 
@@ -709,27 +707,27 @@ Two descriptor examples are provided demonstrating _Stratio Cloud Provisioner_ c
 
 ==== EKS
 
-This example includes:
+This example shows the following particularities:
 
-* AWS cluster with managed _control-plane_ (EKS).
-* Kubernetes 1.26.x (EKS ignores patch version).
-* Use of ECR as Docker registry (no credentials needed).
-* Use of VPC and custom subnets (pre-created; optional).
-* Default _StorageClass_ defined (optional).
-* Enabled API Server logs in EKS.
-* Use of EKS-managed node groups (_MachinePool_): groups without _node++_++image_ are created as _MachinePools_ with EKS-managed AMI.
-* Pre-existing IAM role for node groups (_mp++_++role++_++name_): _Stratio Cloud Provisioner_ assigns it without creating a new one.
-* Mixed cluster with EKS-managed groups (_MachinePool_) and custom AMI groups (_MachineDeployment_): the group with _node++_++image_ is created as a _MachineDeployment_ (self-managed EC2).
-* Worker node groups with multiple configurations:
+* Cluster on AWS with managed _control-plane_ (EKS).
+* Kubernetes version 1.26.x (EKS does not take the _patch_ version into account).
+* Use of ECR as a _Docker registry_ (does not require credentials).
+* Use of custom VPC and subnets (created beforehand). This section is optional.
+* Definition of a default _StorageClass_. This section is optional.
+* _API Server_ logs are enabled on EKS.
+* Use of EKS-managed node groups (_MachinePool_): groups without _node++_++image_ are created as _MachinePools_ with an EKS-managed AMI.
+* Pre-existing IAM role for the node groups (_mp++_++role++_++name_): _Stratio Cloud Provisioner_ assigns it without creating a new one.
+* Coexistence of managed groups (_MachinePool_) and groups with a custom AMI (_MachineDeployment_): the group with _node++_++image_ is created as a _MachineDeployment_ (self-managed EC2).
+* _Worker_ node groups with various use cases:
 ** Different instance types.
-** With explicit _ami++_++type_ (_BOTTLEROCKET_x86_64_) and default AMI.
+** With explicit _ami++_++type_ ("BOTTLEROCKET++_++x86++_++64") and with default AMI.
 ** With SSH key.
-** Kubernetes labels.
-** Autoscaling ranges.
-** Fixed AZ.
-** Custom root volume.
-** Spot instances.
-** AZ distribution: balanced or unbalanced.
+** With Kubernetes labels.
+** With autoscaling ranges.
+** In a fixed zone.
+** With disk customizations.
+** With _spot_ instances.
+** AZ distribution cases: balanced and unbalanced.
 
 [source,yaml]
 ----
@@ -828,15 +826,16 @@ spec:
 
 This example includes:
 
-* GCP cluster with managed _control-plane_.
-* Kubernetes 1.28.x.
-* Use of Docker registry of type GAR.
-* Use of Helm repository of type GAR.
-* _nodes++_++identity_ (default node service account configurable only at creation time).
-* Scopes (list of access scopes for service account).
+* Cluster on GCP with managed _control-plane_.
+* Kubernetes version 1.28.x.
+* Use of a _gar_-type _Docker registry_.
+* Use of a _gar_-type Helm repository.
+* _enable++_++secure++_++boot_ (enabled by default).
+* _nodes++_++identity_ (default service account for the nodes). (Only configurable at cluster creation time).
+* _scopes_ (list of scopes that will be available for this service account).
 * No DNS zone control (enabled by default).
-* Default _StorageClass_ definition (optional).
-* _Control-plane_ settings configurable only at creation time:
+* Definition of a default _StorageClass_. This section is optional.
+* _control-plane_ features: only configurable at cluster creation time.
 ** _cluster++_++network_
 *** _private++_++cluster_
 **** _enable++_++private++_++endpoint_
@@ -855,13 +854,13 @@ This example includes:
 ** _logging++_++config_
 *** _system++_++components_
 *** _workloads_
-* _Worker_ node groups with multiple configurations:
+* _Worker_ node groups with multiple use cases:
 ** Different instance types.
-** No specific image (uses cloud provider default).
-** Kubernetes labels.
-** Autoscaling ranges.
-** Fixed AZ.
-** Custom root volume.
+** Without a specific image (the default cloud provider image will be used).
+** With K8s labels.
+** With autoscaling ranges.
+** In a fixed zone.
+** With disk customizations.
 
 [source,yaml]
 ----
