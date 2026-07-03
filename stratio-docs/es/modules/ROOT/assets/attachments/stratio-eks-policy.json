@@ -2,6 +2,7 @@
   "Version": "2012-10-17",
   "Statement": [
       {
+          "Sid": "EC2ReadOnly",
           "Effect": "Allow",
           "Action": [
               "ec2:CreateTags",
@@ -34,6 +35,9 @@
               "ecr:GetAuthorizationToken",
               "eks:CreateCluster",
               "eks:DescribeAddon",
+              "eks:CreateNodegroup",
+              "eks:DescribeNodegroup",
+              "eks:UpdateNodegroupConfig",
               "eks:DescribeAddonVersions",
               "eks:UpdateAddon",
               "iam:ListOpenIDConnectProviders"
@@ -41,6 +45,7 @@
           "Resource": "*"
       },
       {
+          "Sid": "EC2WriteResources",
           "Effect": "Allow",
           "Action": [
               "ec2:AllocateAddress",
@@ -65,8 +70,10 @@
               "eks:DescribeCluster",
               "eks:CreateAddon",
               "eks:DeleteCluster",
+              "eks:DeleteNodegroup",
               "eks:ListAddons",
               "eks:TagResource",
+              "eks:UntagResource",
               "eks:UpdateClusterConfig",
               "eks:UpdateClusterVersion",
               "secretsmanager:CreateSecret",
@@ -84,10 +91,12 @@
               "arn:aws:ec2:*:${AWS_ACCOUNT_ID}:vpc/*",
               "arn:aws:ecr:*:*:repository/*",
               "arn:aws:eks:*:${AWS_ACCOUNT_ID}:addon/*",
-              "arn:aws:eks:*:${AWS_ACCOUNT_ID}:cluster/*"
+              "arn:aws:eks:*:${AWS_ACCOUNT_ID}:cluster/*",
+              "arn:aws:eks:*:${AWS_ACCOUNT_ID}:nodegroup/*/*/*"
           ]
       },
       {
+          "Sid": "EC2SecurityGroups",
           "Effect": "Allow",
           "Action": [
               "ec2:AuthorizeSecurityGroupIngress"
@@ -97,6 +106,7 @@
           ]
       },
       {
+          "Sid": "SSMOptimizedAMI",
           "Effect": "Allow",
           "Action": [
               "ssm:GetParameter"
@@ -106,6 +116,7 @@
           ]
       },
       {
+          "Sid": "IAMAndOIDC",
           "Effect": "Allow",
           "Action": [
               "iam:CreateOpenIDConnectProvider",
@@ -113,13 +124,14 @@
               "iam:GetOpenIDConnectProvider",
               "iam:TagOpenIDConnectProvider",
               "iam:ListAttachedRolePolicies",
+              "iam:CreateServiceLinkedRole",
               "iam:CreateRole",
-              "iam:TagRole",
-              "iam:UntagRole"
+              "iam:TagRole"
           ],
           "Resource": [
               "arn:aws:iam::${AWS_ACCOUNT_ID}:role/*",
-              "arn:aws:iam::${AWS_ACCOUNT_ID}:oidc-provider/*"
+              "arn:aws:iam::${AWS_ACCOUNT_ID}:oidc-provider/*",
+              "arn:aws:iam::*:role/aws-service-role/*"
           ]
       },
       {
@@ -155,33 +167,12 @@
           "Resource": "arn:aws:autoscaling:*:${AWS_ACCOUNT_ID}:autoScalingGroup:*:autoScalingGroupName/*"
       },
       {
-          "Sid": "CAPAManagedNodegroups",
-          "Effect": "Allow",
-          "Action": [
-              "eks:CreateNodegroup",
-              "eks:DescribeNodegroup",
-              "eks:DeleteNodegroup"
-          ],
-          "Resource": [
-              "arn:aws:eks:*:${AWS_ACCOUNT_ID}:cluster/*",
-              "arn:aws:eks:*:${AWS_ACCOUNT_ID}:nodegroup/*/*/*"
-          ]
-      },
-      {
           "Sid": "CAPAManagedNodegroupsAutoScalingRead",
           "Effect": "Allow",
           "Action": [
               "autoscaling:DescribeAutoScalingGroups"
           ],
           "Resource": "*"
-      },
-      {
-          "Sid": "CAPAManagedNodegroupServiceLinkedRole",
-          "Effect": "Allow",
-          "Action": [
-              "iam:CreateServiceLinkedRole"
-          ],
-          "Resource": "arn:aws:iam::${AWS_ACCOUNT_ID}:role/aws-service-role/eks-nodegroup.amazonaws.com/AWSServiceRoleForAmazonEKSNodegroup"
       }
   ]
 }
