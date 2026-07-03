@@ -408,7 +408,6 @@ If the cluster has earlier versions, run `upgrade-provisioner.py` first.
 
 IMPORTANT: Before running the script, verify that the image and the chart of _cluster-operator_ for this version are available in the container registry and in the Helm repository configured for the cluster. If the cluster uses private registries (`private_registry=true` or `private_helm_repo=true`), make sure the artifacts have been published before continuing.
 
-
 Run the preparation script inside the _Stratio Cloud Provisioner_ container:
 
 [source,bash]

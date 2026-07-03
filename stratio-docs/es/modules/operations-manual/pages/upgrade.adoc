@@ -408,7 +408,6 @@ Si el _cluster_ tiene versiones anteriores, ejecuta primero `upgrade-provisioner
 
 IMPORTANT: Antes de ejecutar el _script_, verifica que la imagen y el _chart_ de _cluster-operator_ de esta versión estén disponibles en el registro de contenedores y en el repositorio de Helm configurados para el _cluster_. Si el _cluster_ usa registros privados (`private_registry=true` o `private_helm_repo=true`), asegúrate de que los artefactos se hayan publicado antes de continuar.
 
-
 Ejecuta el _script_ de preparación dentro del contenedor de _Stratio Cloud Provisioner_:
 
 [source,bash]
