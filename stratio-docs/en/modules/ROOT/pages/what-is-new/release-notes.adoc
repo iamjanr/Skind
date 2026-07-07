@@ -2,6 +2,12 @@
 
 These are the highlights of the _Stratio Cloud Provisioner_ versions for the latest releases:
 
+== 0.17.0-0.8.X
+
+* Support for _MachinePools_ in EKS clusters with managed _control-plane_. Node groups without _node++_++image_ are now provisioned as EKS-managed node groups (_AWSManagedMachinePool_) instead of self-managed EC2 instances. A cluster can combine both types in the same descriptor.
+* New _ami++_++type_ field in _worker++_++nodes_ to select the AMI type of the managed node group. The default value is "BOTTLEROCKET++_++x86++_++64".
+* New _mp++_++role++_++name_ field in _control_plane.aws_ to assign a pre-existing IAM role to all managed node groups, without _Stratio Cloud Provisioner_ creating a new one.
+
 == 0.17.0-0.6 (Nov 15, 2024)
 
 * CoreDNS replicas are now distributed across different nodes to improve availability.

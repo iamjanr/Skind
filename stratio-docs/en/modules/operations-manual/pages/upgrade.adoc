@@ -385,3 +385,68 @@ kubectl get machinepools -A
 kubectl get nodes
 # Verify that CAPX logs do not contain errors after the upgrade
 ----
+
+== EKS clusters with _MachinePools_
+
+NOTE: _MachinePools_ are only available on clusters created with this version of _Stratio Cloud Provisioner_. There is no automatic migration from _MachineDeployments_ to _MachinePools_ on existing clusters. To migrate an existing cluster, see the <<_migration_from_machinepools_to_MachinePools_, migration from _MachineDeployments_ to _MachinePools_>>.
+
+=== Migration from _MachineDeployments_ to _MachinePools_
+
+WARNING: This procedure applies only to EKS clusters (AWS managed). It is not available for Azure VMs or for GKE.
+
+The migration is an assisted, phased process. The `migrate-workers-to-machinepool.py` script prepares the cluster and validates capacity before each drain. Nodes are migrated manually, one by one, at your chosen pace.
+
+==== Prerequisites
+
+* cluster-operator >= 0.6.1 and CAPA >= v2.9.2 on the cluster.
+* `KeosCluster.status.ready = true`.
+* The EKS policy of the deployment user must include the nodegroup management permissions from the _stratio-eks-policy.json_ file: `eks:CreateNodegroup`, `eks:DescribeNodegroup`, `eks:DeleteNodegroup`, `autoscaling:DescribeAutoScalingGroups`, and `iam:CreateServiceLinkedRole`.
+
+If the cluster has earlier versions, run `upgrade-provisioner.py` first.
+
+==== Phase 1: cluster preparation
+
+IMPORTANT: Before running the script, verify that the image and the chart of _cluster-operator_ for this version are available in the container registry and in the Helm repository configured for the cluster. If the cluster uses private registries (`private_registry=true` or `private_helm_repo=true`), make sure the artifacts have been published before continuing.
+
+Run the preparation script inside the _Stratio Cloud Provisioner_ container:
+
+[source,bash]
+----
+python3 migrate-workers-to-machinepool.py \
+  --kubeconfig ~/.kube/config
+----
+
+By default, the script uses the _cluster-operator_ version included in this version of _Stratio Cloud Provisioner_. You can override it with `--cluster-operator-version <version>` if needed.
+
+The script validates the prerequisites, activates the CAPA _feature gates_ (`MachinePool=true` and `EKSAllowAddRoles=true`), and upgrades _cluster-operator_ to the indicated version.
+
+==== Phase 2: node group migration
+
+Repeat the following steps for each node group you want to migrate:
+
+. Add the new _MachinePool_ group to the `KeosCluster` object. Omit `node_image` and specify `ami_type` optionally (default is "BOTTLEROCKET_x86_64"):
++
+[source,bash]
+----
+kubectl patch keoscluster <cluster-name> -n cluster-<cluster-name> \
+  --type=json \
+  -p '[{"op":"add","path":"/spec/worker_nodes/-","value":{"name":"<name>-mp","size":"<size>","quantity":<n>,"az":"<az>","min_size":<min>,"max_size":<max>}}]'
+----
++
+NOTE: Use `--type=json` with the `add` operation and the `/spec/worker_nodes/-` path to add the group without replacing the existing ones. Never use `kubectl apply` on the `KeosCluster`: _cluster-operator_ detects the `kubectl.kubernetes.io/last-applied-configuration` annotation that `apply` generates and skips the actual reconciliation cycle, so changes to `spec.worker_nodes` are never processed.
+
+. Wait until the _MachinePool_ nodes are in _Ready_ state.
+. Verify the capacity and get the drain and deletion instructions:
++
+[source,bash]
+----
+python3 migrate-workers-to-machinepool.py \
+  --check-ready <name>-mp
+----
++
+The script prints the drain commands for each node of the equivalent _MachineDeployment_ group, as well as the instructions to remove that group's entry from the `KeosCluster` object. Review the instructions before running them.
+
+. Run the drain commands the script prints, one by one. Check the cluster status between each node.
+. Follow the instructions the script prints to remove the _MachineDeployment_ group from the `KeosCluster` object.
+
+NOTE: Do not remove the _MachineDeployment_ group until all its nodes have been drained and the _MachinePool_ group has enough capacity to absorb the workload.

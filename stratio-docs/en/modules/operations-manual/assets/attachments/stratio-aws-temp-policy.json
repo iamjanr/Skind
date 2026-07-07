@@ -12,6 +12,7 @@
                 "iam:CreateInstanceProfile",
                 "iam:CreatePolicy",
                 "iam:CreatePolicyVersion",
+                "iam:DeletePolicyVersion",
                 "iam:CreateRole",
                 "iam:CreateUser",
                 "iam:DeleteGroup",

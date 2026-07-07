@@ -12,6 +12,8 @@ Para el aprovisionamiento automatizado en EKS, es necesario ejecutar acciones en
 ** xref:attachment$stratio-aws-temp-policy.json[Descargar permisos temporales para EKS]
 +
 Para el despliegue de EKS, se deberá crear manualmente el rol "AWSServiceRoleForAmazonEKS" y asociarle la política "AmazonEKSServiceRolePolicy" (creada por defecto en AWS).
++
+NOTE: Si el _cluster_ incluye grupos de tipo _MachinePool_ (_nodegroups_ gestionados por EKS), el usuario de despliegue necesita permisos adicionales: `eks:CreateNodegroup`, `eks:DescribeNodegroup`, `eks:DeleteNodegroup`, `autoscaling:DescribeAutoScalingGroups` e `iam:CreateServiceLinkedRole`. Estos permisos ya están incluidos en el fichero _stratio-eks-policy.json_.
 
 * Sistemas operativos certificados
 +
@@ -532,13 +534,14 @@ En este apartado se indican las particularidades del _control-plane_ de Kubernet
 ^|Nombre ^|Descripción ^|Ejemplo ^|Opcional
 
 |_aws_
-|Valores específicos para el _logging_ de EKS (_API Server, audit, authenticator, controller++_++manager_ y/o _scheduler_).
+|Valores específicos de EKS. Incluye la configuración del _logging_ del _control-plane_ ("api", "audit", "authenticator", "controllerManager" o "scheduler"). Opcionalmente, incluye el nombre de un rol IAM preexistente para los grupos de nodos gestionados (_mp++_++role++_++name_). Si se especifica, _Stratio Cloud Provisioner_ asigna ese rol a todos los grupos de nodos sin crear uno nuevo.
 a|
 
 [source,yaml]
 ----
 logging:
   api_server: true
+mp_role_name: "eks-nodegroup-role"
 ----
 
 |Sí
@@ -613,8 +616,18 @@ Las imágenes utilizadas deberán estar soportadas por EKS. Consulta la https://
 |Sí
 
 |_node++_++image_
-|Imagen de instancia utilizada para los nodos _worker_.
+|Imagen de instancia personalizada para los nodos _worker_. Si se especifica en un cluster EKS gestionado, el grupo de nodos se crea como _MachineDeployment_ (nodo EC2 autogestionado). Es mutuamente excluyente con _ami++_++type_.
 |ami-0de933c15c9b49fb5
+|Sí
+
+|_ami++_++type_
+|Tipo de AMI para el grupo de nodos gestionado por EKS (_MachinePool_). Solo válido con _control-plane_ gestionado. Si no se especifica, se usa "BOTTLEROCKET++_++x86++_++64" por defecto. Es mutuamente excluyente con _node++_++image_.
+|BOTTLEROCKET++_++x86++_++64
+|Sí
+
+|_spot_
+|Activa el uso de instancias _spot_ en el grupo de nodos. Permite reducir costes a cambio de un mayor riesgo de interrupción.
+|true
 |Sí
 
 |_labels_
@@ -667,6 +680,8 @@ root_volume:
 
 NOTE: Se ha implementado la opción de establecer un _min++_++size_ igual a cero, lo que permite que el autoescalado pueda incrementar o disminuir el número de nodos hasta alcanzar cero según sea necesario. Esta funcionalidad proporciona un ahorro significativo de costes en comparación con versiones anteriores, ya que permite la definición de un grupo de _workers_ sin instanciar ningún recurso en el proveedor _cloud_ que no sea necesario.
 
+NOTE: En los clusters EKS con _control-plane_ gestionado, el tipo de grupo de nodos depende del campo _node++_++image_. Si está presente, se crea un _MachineDeployment_ (EC2 autogestionado). Si no está presente, se crea un _MachinePool_ (grupo gestionado por EKS). Un cluster puede combinar ambos tipos. Para escalar un _MachinePool_ a cero réplicas, _max++_++size_ debe ser mayor o igual que el número de zonas de disponibilidad del cluster.
+
 === _Stratio KEOS_
 
 Los parámetros para la fase del _keos-installer_ se indicarán en este apartado.
@@ -692,18 +707,22 @@ Se presentan dos casos de descriptor para demostrar la capacidad de _Stratio Clo
 
 ==== EKS
 
-En este ejemplo se pueden ver las siguientes particularidades:
+En este ejemplo se aprecian las siguientes particularidades:
 
-* _Cluster_ en AWS con _control-plane_ gestionado (EKS).
+* Cluster en AWS con _control-plane_ gestionado (EKS).
 * Kubernetes versión 1.26.x (EKS no tiene en cuenta la versión _patch_).
-* Uso de ECR como _Docker registry_ (no necesita credenciales).
-* Uso de VPC y _subnets_ personalizadas (creadas anteriormente). Este apartado es opcional.
+* Uso de ECR como _Docker registry_ (no requiere credenciales).
+* Uso de VPC y _subnets_ personalizadas (creadas previamente). Este apartado es opcional.
 * Definición de una _StorageClass_ por defecto. Este apartado es opcional.
 * Se habilitan los _logs_ del _API Server_ en EKS.
-* Grupos de nodos _worker_ con múltiples casuísticas:
+* Uso de grupos de nodos gestionados por EKS (_MachinePool_): los grupos sin _node++_++image_ se crean como _MachinePools_ con una AMI gestionada por EKS.
+* Rol IAM preexistente para los grupos de nodos (_mp++_++role++_++name_): _Stratio Cloud Provisioner_ lo asigna sin crear uno nuevo.
+* Coexistencia de grupos gestionados (_MachinePool_) y grupos con AMI personalizada (_MachineDeployment_): el grupo con _node++_++image_ se crea como _MachineDeployment_ (EC2 autogestionado).
+* Grupos de nodos _worker_ con varias casuísticas:
 ** Diferentes tipos de instancia.
+** Con _ami++_++type_ explícito ("BOTTLEROCKET++_++x86++_++64") y con AMI por defecto.
 ** Con clave SSH.
-** Con etiquetas de K8s.
+** Con etiquetas de Kubernetes.
 ** Con rangos de autoescalado.
 ** En una zona fija.
 ** Con personalizaciones en el disco.
@@ -754,7 +773,7 @@ spec:
   deploy_autoscaler: false
   keos:
     flavour: production
-    version: 1.31.0
+    version: 1.3.x
   security:
     aws:
       create_iam: false
@@ -762,6 +781,7 @@ spec:
     aws:
       logging:
         api_server: true
+      mp_role_name: "eks-nodegroup-role"
     managed: true
   worker_nodes:
     - name: eks-prod-xlarge
@@ -769,6 +789,7 @@ spec:
       max_size: 18
       min_size: 6
       size: m6i.xlarge
+      ami_type: BOTTLEROCKET_x86_64
       labels:
         disktype: standard
       root_volume:
@@ -778,6 +799,8 @@ spec:
       ssh_key: stg-key
     - name: eks-prod-medium-spot
       quantity: 4
+      min_size: 4
+      max_size: 8
       zone_distribution: unbalanced
       size: t3.medium
       spot: true
@@ -785,8 +808,18 @@ spec:
         disktype: standard
     - name: eks-prod-medium-az
       quantity: 3
+      min_size: 3
+      max_size: 6
       size: t3.medium
       az: eu-west-1c
+    - name: eks-prod-custom-ami
+      quantity: 2
+      max_size: 6
+      min_size: 2
+      size: m6i.large
+      node_image: "ami-0a1234567890abcde"
+      labels:
+        workload: custom
 ----
 
 ==== GKE
@@ -878,7 +911,7 @@ spec:
       labels: "owner=stratio"
   keos:
     flavour: production
-    version: 1.31.0
+    version: 1.3.x
   control_plane:
     managed: true
     gcp:
@@ -935,8 +968,8 @@ metadata:
 spec:
     private_registry: true
     private_helm_repo: true
-    cluster_operator_version: 0.3.4
-    cluster_operator_image_version: 0.3.4
+    cluster_operator_version: 0.8.x
+    cluster_operator_image_version: 0.8.x
 ----
 
 ==== Azure no gestionado
@@ -994,7 +1027,7 @@ spec:
     manage_zone: false
   keos:
     flavour: production
-    version: 1.31.0
+    version: 1.3.x
   security:
     control_plane_identity: "/subscriptions/6e2a38cd-../stratio-control-plane"
     nodes_identity: "/subscriptions/6e2a38cd-../stratio-nodes"
