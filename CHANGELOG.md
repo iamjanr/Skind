@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## 0.9.0 (upcoming)
 
+* [PLT-4509] Remove redundant ENIConfig generation for EKS clusters using pods_cidr; CAPA already creates it natively with the correct security group, and the manual step could overwrite it with an incorrect one
 * [PLT-4515] Fix change-version.sh hardcoding versionPreRelease to SNAPSHOT regardless of the version passed by the release pipeline; the binary now reports its real milestone/release/pre-release version (e.g. `0.9.0-m.3`) instead of always `X.Y.Z-SNAPSHOT.N+hash`
 * [PLT-4334] Fix cloud-provisioner crash when CloudFormation stack has no updates to perform (ignore "No updates are to be performed" error from clusterawsadm as success)
 * [PLT-4131] Add kubeconfig secret recovery runbooks for GKE (CAPG), EKS (CAPA) and Azure VMs (CAPZ/KCP) in docs/
