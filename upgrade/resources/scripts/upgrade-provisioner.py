@@ -31,7 +31,9 @@ from io import StringIO
 from urllib.parse import urlparse
 
 CLOUD_PROVISIONER = "0.17.0-0.8"
-CLUSTER_OPERATOR = "0.7.0-m.1"
+# NOTE: milestone build for the 0.9.0 pre-release under test — bump again to the
+# final "0.7.0" (no "-m.N" suffix) once cluster-operator cuts its release.
+CLUSTER_OPERATOR = "0.7.0-m.5"
 CLUSTER_OPERATOR_UPGRADE_SUPPORT = "0.5.X"
 CLOUD_PROVISIONER_LAST_PREVIOUS_RELEASE = "0.17.0-0.7"
 
@@ -46,8 +48,8 @@ CAPA = "v2.9.3"
 CAPG = "1.6.1-0.4.0"
 CAPZ = "v1.21.3"
 
-TIGERA_OPERATOR_CALICOCTL_VERSION = "3.31.5"
-TIGERA_OPERATOR_CONTROLLER_VERSION = "v1.40.11"
+TIGERA_OPERATOR_CALICOCTL_VERSION = "3.31.6"
+TIGERA_OPERATOR_CONTROLLER_VERSION = "v1.40.13"
 
 common_charts = {
     "cert-manager": {
@@ -56,23 +58,23 @@ common_charts = {
         "repo": "https://charts.jetstack.io"
     },
     "cluster-autoscaler": {
-        "version": "9.52.1",
+        "version": "9.57.0",
         "namespace": "kube-system",
         "repo": "https://kubernetes.github.io/autoscaler"
     },
     "cluster-operator": {
-        "version": "0.7.0-m.1",
+        "version": "0.7.0-m.5",
         "namespace": "kube-system",
         "repo": ""
     },
     "flux2": {
-        "version": "2.18.4",
+        "version": "2.17.2",
         "namespace": "kube-system",
         "repo": "https://fluxcd-community.github.io/helm-charts",
         "release_name": "flux"
     },
     "tigera-operator": {
-        "version": "v3.31.5",
+        "version": "v3.31.6",
         "namespace": "tigera-operator",
         "repo": "https://docs.projectcalico.org/charts"
     }
@@ -88,17 +90,17 @@ aws_eks_charts = {
 
 azure_vm_charts = {
     "azuredisk-csi-driver": {
-        "version": "1.33.5",
+        "version": "1.34.4",
         "namespace": "kube-system",
         "repo": "https://raw.githubusercontent.com/kubernetes-sigs/azuredisk-csi-driver/master/charts"
     },
     "azurefile-csi-driver": {
-        "version": "1.34.1",
+        "version": "1.35.3",
         "namespace": "kube-system",
         "repo": "https://raw.githubusercontent.com/kubernetes-sigs/azurefile-csi-driver/master/charts"
     },
     "cloud-provider-azure": {
-        "version": "1.34.2",
+        "version": "1.35.3",
         "namespace": "kube-system",
         "repo": "https://raw.githubusercontent.com/kubernetes-sigs/cloud-provider-azure/master/helm/repo"
     }
