@@ -83,7 +83,7 @@ var azureCharts = ChartsDictionary{
 				"azurefile-csi-driver": {Repository: "https://raw.githubusercontent.com/kubernetes-sigs/azurefile-csi-driver/master/charts", Namespace: "kube-system", Version: "1.35.3", Pull: false, Reconcile: false},
 				"cloud-provider-azure": {Repository: "https://raw.githubusercontent.com/kubernetes-sigs/cloud-provider-azure/master/helm/repo", Namespace: "kube-system", Version: "1.35.3", Pull: true, Reconcile: true},
 				"cluster-autoscaler":   {Repository: "https://kubernetes.github.io/autoscaler", Version: "9.57.0", Namespace: "kube-system", Pull: false, Reconcile: false},
-				"tigera-operator":      {Repository: "https://docs.projectcalico.org/charts", Version: "v3.31.5", Namespace: "tigera-operator", Pull: true, Reconcile: true},
+				"tigera-operator":      {Repository: "https://docs.projectcalico.org/charts", Version: "v3.31.6", Namespace: "tigera-operator", Pull: true, Reconcile: true},
 			},
 		},
 	},
