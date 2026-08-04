@@ -4,18 +4,18 @@ core:
     helm: v3.13.1
   images:
     calico:
-      cni: v3.31.5
-      csi: v3.31.5
-      ctl: v3.31.5
-      kube-controllers: v3.31.5
-      node-driver-registrar: v3.31.5
-      node: v3.31.5
-      pod2daemon-flexvol: v3.31.5
-      tigera-operator: v1.40.11
-      typha: v3.31.5
-      whisker: v3.31.5
-      whisker-backend: v3.31.5
-      goldmane: v3.31.5
+      cni: v3.31.6
+      csi: v3.31.6
+      ctl: v3.31.6
+      kube-controllers: v3.31.6
+      node-driver-registrar: v3.31.6
+      node: v3.31.6
+      pod2daemon-flexvol: v3.31.6
+      tigera-operator: v1.40.13
+      typha: v3.31.6
+      whisker: v3.31.6
+      whisker-backend: v3.31.6
+      goldmane: v3.31.6
     capi:
       kubeadm-bootstrap-controller: v1.10.10
       kubeadm-control-plane-controller: v1.10.10
@@ -48,7 +48,7 @@ core:
     cluster-autoscaler: 9.57.0
     cluster-operator: 0.5.2
     flux: 2.17.2
-    tigera-operator: v3.31.5
+    tigera-operator: v3.31.6
 aws:
   capa:
     binaries:
