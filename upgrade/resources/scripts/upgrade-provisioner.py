@@ -10,7 +10,7 @@
 #   - GKE                                                    #
 ##############################################################
 
-__version__ = "0.8.0"
+__version__ = "0.9.0"
 
 import argparse
 import os
@@ -30,12 +30,18 @@ from ruamel.yaml import YAML
 from io import StringIO
 from urllib.parse import urlparse
 
-CLOUD_PROVISIONER = "0.17.0-0.8"
+# Force line buffering so log lines stay in execution order (e.g. when piped to a file).
+sys.stdout.reconfigure(line_buffering=True)
+
+# NOTE: 0.9.0 dropped the legacy "0.17.0-0.X" kind-fork-prefixed scheme (VERSION file
+# on stratio/master is "0.9.0-SNAPSHOT", no prefix; last real release under the old
+# scheme was 0.17.0-0.8.5, no 0.17.0-0.9.X tag exists).
+CLOUD_PROVISIONER = "0.9.0"
 # NOTE: milestone build for the 0.9.0 pre-release under test — bump again to the
 # final "0.7.0" (no "-m.N" suffix) once cluster-operator cuts its release.
-CLUSTER_OPERATOR = "0.7.0-m.5"
+CLUSTER_OPERATOR = "0.7.0-m.8"
 CLUSTER_OPERATOR_UPGRADE_SUPPORT = "0.5.X"
-CLOUD_PROVISIONER_LAST_PREVIOUS_RELEASE = "0.17.0-0.7"
+CLOUD_PROVISIONER_LAST_PREVIOUS_RELEASE = "0.17.0-0.8"
 
 AWS_LOAD_BALANCER_CONTROLLER_CHART = "1.11.0"
 
@@ -63,7 +69,7 @@ common_charts = {
         "repo": "https://kubernetes.github.io/autoscaler"
     },
     "cluster-operator": {
-        "version": "0.7.0-m.5",
+        "version": "0.7.0-m.6",
         "namespace": "kube-system",
         "repo": ""
     },
@@ -529,6 +535,20 @@ def get_keos_cluster_cluster_config():
         raise e
 
 
+SENSITIVE_ENV_VARS = [
+    "AWS_B64ENCODED_CREDENTIALS",
+    "GCP_B64ENCODED_CREDENTIALS",
+    "GITHUB_TOKEN",
+    "AZURE_CLIENT_SECRET_B64",
+]
+
+def redact_command(command):
+    '''Redact known sensitive env var assignments before logging/raising a command string'''
+    safe_command = command
+    for var in SENSITIVE_ENV_VARS:
+        safe_command = re.sub(rf"{var}=\S+", f"{var}=<redacted>", safe_command)
+    return safe_command
+
 def run_command(command, allow_errors=False, retries=3, retry_delay=2):
 
     if config["dry_run"]:
@@ -564,7 +584,7 @@ def run_command(command, allow_errors=False, retries=3, retry_delay=2):
         # If the command fails and the error is not allowed, but there are retries left, wait and retry
         attempts += 1
         if attempts > retries:
-            raise Exception(f"Error executing '{command}': {result.stderr}")
+            raise Exception(f"Error executing '{redact_command(command)}': {result.stderr}")
 
         time.sleep(retry_delay)
 
@@ -822,6 +842,59 @@ def apply_chart_crds(chart_name, chart_version, repo_url, repo_schema):
         print(f"WARN ({e}) — continuing without CRD update")
 
 
+def wait_for_helmrelease_ready(release_name, namespace, timeout="3m"):
+    '''Wait for a HelmRelease to report Ready=True, raising with the real status on failure'''
+
+    command = f"{kubectl} wait helmrelease {release_name} -n {namespace} --for=condition=Ready --timeout={timeout}"
+    try:
+        run_command(command, retries=0)  # kubectl wait already has its own timeout/retry semantics
+    except Exception as e:
+        status_output, _ = run_command(
+            f"{kubectl} get helmrelease {release_name} -n {namespace} -o jsonpath='{{.status.conditions}}'",
+            allow_errors=True
+        )
+        raise Exception(f"HelmRelease {namespace}/{release_name} not Ready: {status_output}") from e
+
+def check_release_pods_healthy(chart_name, release_name, namespace):
+    '''Best-effort check that the release's pods are actually healthy, not just Ready in Flux'''
+
+    pods = []
+    for selector in (f"app.kubernetes.io/instance={release_name}", f"app.kubernetes.io/name={chart_name}", f"k8s-app={chart_name}"):
+        pods_json, _ = run_command(f"{kubectl} get pods -n {namespace} -l {selector} -o json", allow_errors=True)
+        if pods_json:
+            try:
+                pods = json.loads(pods_json).get("items", [])
+            except Exception:
+                pods = []
+            if pods:
+                break
+
+    if not pods:
+        print(f"(pod health check skipped for {release_name}: no pods matched known labels)", end=" ")
+        return
+
+    unhealthy = []
+    for pod in pods:
+        pod_name = pod["metadata"]["name"]
+        phase = pod.get("status", {}).get("phase")
+        container_statuses = pod.get("status", {}).get("containerStatuses", [])
+        bad_reasons = [
+            cs["state"]["waiting"]["reason"]
+            for cs in container_statuses
+            if "waiting" in cs.get("state", {}) and cs["state"]["waiting"].get("reason") in
+               ("CrashLoopBackOff", "ImagePullBackOff", "ErrImagePull", "CreateContainerConfigError")
+        ]
+        all_ready = all(cs.get("ready", False) for cs in container_statuses) if container_statuses else False
+        if phase not in ("Running", "Succeeded") or bad_reasons or not all_ready:
+            unhealthy.append((pod_name, phase, bad_reasons))
+
+    if unhealthy:
+        details = []
+        for pod_name, phase, bad_reasons in unhealthy:
+            describe_output, _ = run_command(f"{kubectl} describe pod {pod_name} -n {namespace}", allow_errors=True)
+            details.append(f"--- {pod_name} (phase={phase}, reasons={bad_reasons}) ---\n{describe_output[-1500:]}")
+        raise Exception(f"{len(unhealthy)} unhealthy pod(s) for release {release_name}:\n" + "\n".join(details))
+
 def upgrade_chart(chart_name, chart_data):
     '''Update chart HelmRelease'''
     chart_repo = chart_data["repo"]
@@ -919,6 +992,11 @@ def upgrade_chart(chart_name, chart_data):
         run_command(f"{kubectl} apply -f {repository_file} --server-side --force-conflicts")
         run_command(f"{kubectl} apply -f {release_file} -n {chart_namespace} --server-side --force-conflicts")
 
+        # cluster-operator has its own dedicated wait right after upgrade_charts() returns
+        if chart_name != "cluster-operator":
+            wait_for_helmrelease_ready(release_name, chart_namespace)
+            check_release_pods_healthy(chart_name, release_name, chart_namespace)
+
         print("OK")
 
         # Cleanup temp files after successful apply
@@ -931,6 +1009,45 @@ def upgrade_chart(chart_name, chart_data):
     except Exception as e:
         cleanup_temp_files()
         raise e
+
+def print_planned_changes(charts, provider):
+    '''Print current (live, queried from the cluster) vs target versions before applying any change'''
+
+    print("[INFO] Planned changes:")
+
+    installed_versions = {}
+    try:
+        installed_output, _ = run_command(f"{helm} list --all-namespaces --output json", allow_errors=True)
+        if installed_output:
+            for release in json.loads(installed_output):
+                installed_versions[release["name"]] = release.get("chart", "")
+    except Exception:
+        pass
+
+    for chart_name, chart_data in charts.items():
+        release_name = "flux" if chart_name == "flux2" else chart_name
+        chart_field = installed_versions.get(release_name, "")
+        # helm's "chart" field is "<chartname>-<version>" — strip the chart name prefix
+        current = chart_field[len(chart_name) + 1:] if chart_field.startswith(f"{chart_name}-") else "unknown"
+        print(f"    {chart_name}: {current} -> {chart_data['version']}")
+
+    provider_deployments = [("capi-system", "capi-controller-manager", CAPI)]
+    if provider == "aws":
+        provider_deployments.append(("capa-system", "capa-controller-manager", CAPA))
+    elif provider == "gcp":
+        provider_deployments.append(("capg-system", "capg-controller-manager", CAPG))
+    elif provider == "azure":
+        provider_deployments.append(("capi-kubeadm-bootstrap-system", "capi-kubeadm-bootstrap-controller-manager", CAPI_KUBEADM_BOOTSTRAP))
+        provider_deployments.append(("capi-kubeadm-control-plane-system", "capi-kubeadm-control-plane-controller-manager", CAPI_KUBEADM_CONTROL_PLANE))
+        provider_deployments.append(("capz-system", "capz-controller-manager", CAPZ))
+
+    for namespace, deploy, target_version in provider_deployments:
+        image, _ = run_command(
+            f"{kubectl} -n {namespace} get deploy {deploy} -o jsonpath='{{.spec.template.spec.containers[?(@.name==\"manager\")].image}}'",
+            allow_errors=True
+        )
+        current_version = image.rsplit(":", 1)[-1] if image and ":" in image else "unknown"
+        print(f"    {deploy}: {current_version} -> {target_version}")
 
 def upgrade_charts(charts):
     '''Update the charts'''
@@ -951,7 +1068,24 @@ def stop_keoscluster_controller():
 
     try:
         print("[INFO] Stopping keoscluster-controller-manager deployment:", end =" ", flush=True)
-        run_command(f"{kubectl} scale deployment -n kube-system keoscluster-controller-manager --replicas=0", allow_errors=True)
+        run_command(f"{kubectl} scale deployment -n kube-system keoscluster-controller-manager --replicas=0")
+
+        if config["dry_run"]:
+            print("DRY-RUN")
+            return
+
+        # Wait until pods actually terminate before touching CRDs/providers live
+        deadline = time.time() + 120
+        while time.time() < deadline:
+            pods, _ = run_command(
+                f"{kubectl} get pods -n kube-system -l app.kubernetes.io/name=keoscluster-controller-manager --no-headers",
+                allow_errors=True
+            )
+            if not pods.strip():
+                break
+            time.sleep(5)
+        else:
+            raise Exception("keoscluster-controller-manager pods still present after scale-down timeout")
 
         print("OK")
     except Exception as e:
@@ -966,8 +1100,14 @@ def disable_keoscluster_webhooks():
         backup_keoscluster_webhooks()
         print("[INFO] Disabling KEOSCluster webhooks:", end =" ", flush=True)
 
-        run_command(f"{kubectl} delete validatingwebhookconfiguration keoscluster-validating-webhook-configuration", allow_errors=True)
-        run_command(f"{kubectl} delete mutatingwebhookconfiguration keoscluster-mutating-webhook-configuration", allow_errors=True)
+        _, err = run_command(f"{kubectl} delete validatingwebhookconfiguration keoscluster-validating-webhook-configuration", allow_errors=True)
+        if err and "NotFound" not in err:
+            raise Exception(f"Failed to delete validatingwebhookconfiguration: {err}")
+
+        _, err = run_command(f"{kubectl} delete mutatingwebhookconfiguration keoscluster-mutating-webhook-configuration", allow_errors=True)
+        if err and "NotFound" not in err:
+            raise Exception(f"Failed to delete mutatingwebhookconfiguration: {err}")
+
         print("OK")
     except Exception as e:
         print("FAILED")
@@ -982,10 +1122,25 @@ def backup_keoscluster_webhooks():
         if not os.path.exists(os.path.dirname(backup_file)):
             os.makedirs(os.path.dirname(backup_file))
         print("[INFO] Backing up KEOSCluster webhook configurations:", end =" ", flush=True)
-        command = f"{helm} get manifest -n kube-system cluster-operator"
-        command += f" | yq 'select(.kind == \"ValidatingWebhookConfiguration\" or .kind == \"MutatingWebhookConfiguration\")'"
-        command += f" > {backup_file}"
-        execute_command(command, False)
+
+        manifest, _ = run_command(f"{helm} get manifest -n kube-system cluster-operator")  # check exit code before piping to yq
+
+        yq_result = subprocess.run(
+            ["yq", 'select(.kind == "ValidatingWebhookConfiguration" or .kind == "MutatingWebhookConfiguration")'],
+            input=manifest, capture_output=True, text=True
+        )
+        if yq_result.returncode != 0:
+            raise Exception(f"yq filtering failed: {yq_result.stderr}")
+
+        with open(backup_file, 'w') as f:
+            f.write(yq_result.stdout)
+
+        expected_kinds = ["ValidatingWebhookConfiguration", "MutatingWebhookConfiguration"]
+        missing = [k for k in expected_kinds if f"kind: {k}" not in yq_result.stdout]
+        if missing:
+            raise Exception(f"Backup file is missing expected webhook kind(s): {', '.join(missing)}")
+
+        print("OK")
     except Exception as e:
         print("FAILED")
         print(f"[ERROR] Error backing up KEOSCluster webhooks: {e}")
@@ -1304,7 +1459,7 @@ def upgrade_cluster_api_providers(provider):
 
     command += "--wait-providers"
 
-    safe_command = re.sub(r"GCP_B64ENCODED_CREDENTIALS=\S+", "GCP_B64ENCODED_CREDENTIALS=<redacted>", command)
+    safe_command = redact_command(command)
     print(f"\n[DEBUG] Full clusterctl command: {safe_command}", flush=True)
 
     run_command(command)
@@ -1321,7 +1476,17 @@ def restore_keoscluster_webhooks():
     ]
     try:
         print("[INFO] Restoring KEOSCluster webhooks from backup:", end =" ", flush=True)
-        run_command(f"{kubectl} create -f {backup_file}", allow_errors=True)
+        _, err = run_command(f"{kubectl} create -f {backup_file}", allow_errors=True)
+        if err and "AlreadyExists" not in err:
+            raise Exception(f"Failed to restore webhooks from backup: {err}")
+
+        # "create" succeeding (or no-op'ing on AlreadyExists) isn't proof the webhook is
+        # actually there — verify both objects exist before declaring the restore done.
+        for resource in resources_webhooks:
+            _, check_err = run_command(f"{kubectl} get {resource['kind']} {resource['name']}", allow_errors=True)
+            if "NotFound" in check_err or "not found" in check_err.lower():
+                raise Exception(f"{resource['kind']}/{resource['name']} missing after restore attempt")
+
         print("OK")
 
         print("[INFO] Labeling and annotating webhooks:", end =" ", flush=True)
@@ -1552,6 +1717,8 @@ if __name__ == '__main__':
 
     # Parse arguments
     config = parse_args()
+
+    print("[INFO] Mode: " + ("DRY-RUN (no changes will be applied)" if config["dry_run"] else "REAL — applying changes"))
 
     # Set kubeconfig
     print("[INFO] Setting kubeconfig:", end =" ", flush=True)
@@ -1814,6 +1981,22 @@ if __name__ == '__main__':
         credentials = subprocess.getoutput(kubectl + " -n " + namespace + " get secret capa-manager-bootstrap-credentials -o jsonpath='{.data.credentials}'")
         # Enable EKS IAM integration and set base64-encoded credentials
         env_vars += " CAPA_EKS_IAM=true AWS_B64ENCODED_CREDENTIALS=" + credentials
+        # MachinePool + EKSAllowAddRoles feature gates for CAPA (needed for AWSManagedMachinePool)
+        if managed:
+            # clusterctl skips reinstalling CAPA if its version is unchanged, so these
+            # env vars are a no-op in that case — report which case this run is in.
+            capa_args, _ = run_command(
+                f"{kubectl} get deployment capa-controller-manager -n capa-system "
+                "-o jsonpath='{.spec.template.spec.containers[?(@.name==\"manager\")].args}'",
+                allow_errors=True
+            )
+            gates_already_active = "MachinePool=true" in capa_args and "EKSAllowAddRoles=true" in capa_args
+            if gates_already_active:
+                print("[INFO] CAPA feature gates (MachinePool, EKSAllowAddRoles) already active: SKIP")
+            else:
+                print("[INFO] CAPA feature gates (MachinePool, EKSAllowAddRoles) will be requested for this upgrade "
+                      "(only takes effect if clusterctl actually reinstalls CAPA, i.e. its version changes)")
+            env_vars += " EXP_MACHINE_POOL=true CAPA_EKS_ADD_ROLES=true"
 
     elif provider == "gcp":
         # GCP/CAPG (Cluster API Provider GCP) configuration
@@ -1894,6 +2077,8 @@ if __name__ == '__main__':
     # Filter out charts that are not installed to avoid errors
     charts_to_upgrade = filter_installed_charts(charts_to_upgrade)
 
+    print_planned_changes(charts_to_upgrade, provider)
+
     upgrade_charts(charts_to_upgrade)
     print("[INFO] All charts updated successfully")
 
@@ -1920,31 +2105,48 @@ if __name__ == '__main__':
     print("OK")
 
     stop_keoscluster_controller()
-    disable_keoscluster_webhooks()
-    update_clusterconfig(cluster_config, charts_to_upgrade, provider, cluster_operator_version)
 
-    # -------------------------------------------------
-    # Private registry configuration for GCP (critical: must run before clusterctl upgrade)
-    # -------------------------------------------------
-    if private_registry:
-        registry_url = get_keos_registry_url(keos_cluster)
-        print(f"[DEBUG] Using private registry: {registry_url}")
-        create_clusterctl_config_for_private_registry(registry_url, provider, pull_through=is_ecr_pull_through_enabled(keos_cluster))
+    # Best-effort restore of webhooks/controller on failure before re-raising
+    try:
+        disable_keoscluster_webhooks()
+        update_clusterconfig(cluster_config, charts_to_upgrade, provider, cluster_operator_version)
+
+        # -------------------------------------------------
+        # Private registry configuration for GCP (critical: must run before clusterctl upgrade)
+        # -------------------------------------------------
+        if private_registry:
+            registry_url = get_keos_registry_url(keos_cluster)
+            print(f"[DEBUG] Using private registry: {registry_url}")
+            create_clusterctl_config_for_private_registry(registry_url, provider, pull_through=is_ecr_pull_through_enabled(keos_cluster))
+            if provider == "gcp":
+                # Also patch GCP CRDs to remove conversion webhooks (caBundle issue)
+                config_dir = os.path.expanduser("~/.cluster-api")
+                patch_gcp_crd_conversion_webhook(config_dir)
+
+        # -------------------------------------------------
+        # GCP CRD conversion webhook cleanup (prevents caBundle PEM error during clusterctl upgrade)
+        # -------------------------------------------------
         if provider == "gcp":
-            # Also patch GCP CRDs to remove conversion webhooks (caBundle issue)
-            config_dir = os.path.expanduser("~/.cluster-api")
-            patch_gcp_crd_conversion_webhook(config_dir)
-
-    # -------------------------------------------------
-    # GCP CRD conversion webhook cleanup (prevents caBundle PEM error during clusterctl upgrade)
-    # -------------------------------------------------
-    if provider == "gcp":
-        patch_capg_crds_live()
-    # -------------------------------------------------
-    # Execute clusterctl upgrade
-    # -------------------------------------------------
-    upgrade_cluster_api_providers(provider)
-    print("[INFO] Cluster API providers upgraded successfully")
+            patch_capg_crds_live()
+        # -------------------------------------------------
+        # Execute clusterctl upgrade
+        # -------------------------------------------------
+        upgrade_cluster_api_providers(provider)
+        print("[INFO] Cluster API providers upgraded successfully")
+    except Exception as e:
+        print(f"[ERROR] Critical section failed ({e}) — attempting controlled recovery: restoring webhooks and controller before aborting")
+        try:
+            restore_keoscluster_webhooks()
+            start_keoscluster_controller()
+            run_command(
+                kubectl + " patch helmrelease cluster-operator -n kube-system --type merge --patch '{\"spec\":{\"suspend\":false}}'",
+                allow_errors=True
+            )
+            print("[INFO] Recovery completed: KeosCluster webhooks and controller restored, but the upgrade itself did NOT complete")
+        except Exception as recovery_error:
+            print(f"[ERROR] Recovery ALSO failed: {recovery_error}")
+            print("[ERROR] Cluster may be left with KeosCluster webhooks disabled and the controller stopped — manual intervention required")
+        raise e
 
     print("[INFO] Restoring KEOSCluster webhooks and starting controller...")
     keos_cluster, cluster_config = get_keos_cluster_cluster_config()
@@ -1994,3 +2196,4 @@ if __name__ == '__main__':
     elapsed_time = end_time - start_time
     minutes, seconds = divmod(elapsed_time, 60)
     print("[INFO] Upgrade process finished successfully in " + str(int(minutes)) + " minutes and " + "{:.2f}".format(seconds) + " seconds")
+    print("[INFO] Mode was: " + ("DRY-RUN (no changes were applied)" if config["dry_run"] else "REAL — changes were applied"))
