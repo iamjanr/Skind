@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## 0.9.0 (upcoming)
 
+* [PLT-4265] Harden `upgrade-provisioner.py`: align target component versions with cloud-provisioner 0.9.0/K8s 1.35, add pre-flight cluster health checks (with `--skip-preflight-checks` bypass), fix the chart-version SKIP logic silently bypassing the cluster-autoscaler/tigera-operator overrides, fix the cluster-autoscaler custom image repository breaking under ECR pull-through, fix the tigera-operator calicoctl tag, skip `clusterctl upgrade apply` when providers are already at target version, restore CAPI/CAPX HA replicas after clusterctl runs, add controlled recovery on critical-section failure, and fix an invalid `kubectl wait` jsonpath expression
 * [PLT-4603] Allow `ami_type: BOTTLEROCKET_x86_64_NVIDIA` for EKS MachinePool worker nodes (was rejected by the CLI validator, only `BOTTLEROCKET_x86_64` was accepted)
 * [PLT-4562] Bump Calico v3.31.5→v3.31.6, tigera-operator controller v1.40.11→v1.40.13 (k8s 1.35 only) to resolve vulnerabilities
 * [PLT-4509] Remove redundant ENIConfig generation for EKS clusters using pods_cidr; CAPA already creates it natively with the correct security group, and the manual step could overwrite it with an incorrect one
