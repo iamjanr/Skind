@@ -37,6 +37,12 @@ sys.stdout.reconfigure(line_buffering=True)
 # on stratio/master is "0.9.0-SNAPSHOT", no prefix; last real release under the old
 # scheme was 0.17.0-0.8.5, no 0.17.0-0.9.X tag exists).
 CLOUD_PROVISIONER = "0.9.0"
+# Target k8s minor for cloud-provisioner 0.9.0 (see CHANGELOG.md PLT-4247). Must be one
+# of the minors accepted by the KeosCluster webhook (keoscluster_webhook.go:61,
+# k8sVersionSupported) — bare "major.minor", no leading "v" and no patch digit; the
+# patch digit used when patching the CR is always ".0" (EKS/GKE ignore it, it's not a
+# real "install this exact point release" version).
+K8S_VERSION = "1.35"
 # NOTE: milestone build for the 0.9.0 pre-release under test — bump again to the
 # final "0.7.0" (no "-m.N" suffix) once cluster-operator cuts its release.
 CLUSTER_OPERATOR = "0.7.0-m.8"
@@ -182,6 +188,8 @@ def parse_args():
     parser.add_argument("--private", action="store_true", help="Treats the Docker registry and the Helm repository as private")
     parser.add_argument("--ecr-pull-through", action="store_true", help="Force ECR pull-through cache mode regardless of KeosCluster spec")
     parser.add_argument("--skip-preflight-checks", action="store_true", help="Skip cluster health checks before upgrading (NOT recommended: an unhealthy cluster can make the upgrade worse, e.g. a partially-drained node or a CAPI controller stuck at 1 replica)")
+    parser.add_argument("--k8s-version", help="Set the target k8s minor version to bump the cluster to (e.g. 1.35). Applied as a single patch to KeosCluster.spec.k8s_version — the KeosCluster webhook's +1-minor-per-patch limit is bypassed the same way the rest of this script already bypasses it for clusterctl", default=K8S_VERSION)
+    parser.add_argument("--start-from-k8s-version", action="store_true", help="Skip the interactive Y/N confirmation before bumping k8s_version (the bump itself is still a single patch to --k8s-version, not a resume-from-intermediate-step mechanism)")
     args = parser.parse_args()
     return vars(args)
 
@@ -1708,6 +1716,113 @@ def restore_capi_capx_ha_replicas(provider):
         print(f"[ERROR] Error restoring CAPI/CAPX HA replicas: {e}")
         raise e
 
+def parse_k8s_minor(version):
+    '''Extract (major, minor) as ints from a k8s version string like "v1.32.0" or "1.32".'''
+
+    match = re.match(r'v?(\d+)\.(\d+)', version)
+    if not match:
+        raise ValueError(f"Cannot parse k8s version: {version}")
+    return (int(match.group(1)), int(match.group(2)))
+
+def bump_k8s_version(keos_cluster, cluster_name, target_minor, start_from_k8s_version, dry_run):
+    '''Patch KeosCluster.spec.k8s_version to target_minor in a single step.
+
+    Single patch to the final target, not a sequential 1.32->1.33->1.34->1.35 walk: CAPA
+    advances the real EKS control plane one minor at a time on its own (verified live
+    2026-08-10 via `aws eks list-updates`/`describe-update`: a direct 1.32->1.35 patch on
+    a management cluster produced two distinct VersionUpdate operations, 1.33 and 1.34,
+    never a direct jump). The KeosCluster webhook's own +1-minor-per-patch limit
+    (keoscluster_webhook.go:1313 isValidUpgrade) is bypassed the same way the rest of
+    this critical section already bypasses it — this function must run while
+    disable_keoscluster_webhooks() is in effect, same as the clusterctl upgrade above.
+
+    Legacy MachineDeployment workers are NOT paused here: PLT-4621's fix
+    (resolveNodeKind()) already pins them to their current template when node_image=""
+    without any special-casing in this script, validated live end-to-end against
+    eks-4265-hprod-1 (see Tasks/misc/cluster-operator/worker-node-kind-mismatch/
+    validacion-en-vivo.md).
+
+    Returns True if a bump was actually initiated (patch applied), False if skipped
+    (already at target, or not confirmed).'''
+
+    current_version = keos_cluster["spec"]["k8s_version"]
+    current_minor = parse_k8s_minor(current_version)
+    target_minor_tuple = parse_k8s_minor(target_minor)
+
+    if current_minor == target_minor_tuple:
+        print(f"[INFO] k8s_version already at target {target_minor}: SKIP")
+        return False
+    if current_minor > target_minor_tuple:
+        # A plain Exception, not sys.exit(): this runs inside the critical section's
+        # try/except (disable_keoscluster_webhooks() already in effect) — SystemExit is
+        # not an Exception subclass and would skip the controlled-recovery except block,
+        # leaving the cluster with webhooks disabled and the controller stopped.
+        raise Exception(f"Cluster k8s_version ({current_version}) is newer than the requested target (v{target_minor}.0) — downgrade is not supported")
+
+    target_version = f"v{target_minor}.0"
+    print(f"[INFO] Planned k8s_version bump: {current_version} -> {target_version}")
+
+    if dry_run:
+        print("[INFO] Bumping k8s_version: DRY-RUN")
+        return False
+
+    if not start_from_k8s_version:
+        while True:
+            answer = input(f"Proceed with the k8s_version bump {current_version} -> {target_version}? [y/N]: ").strip().lower()
+            if answer in ("", "n", "no"):
+                print("[INFO] k8s_version bump: SKIP (not confirmed)")
+                return False
+            if answer in ("y", "yes"):
+                break
+            print("[WARN] Please answer 'y' or 'n'")
+
+    print(f"[INFO] Patching k8s_version to {target_version}:", end=" ", flush=True)
+    command = (
+        kubectl + " patch keoscluster " + cluster_name + " -n cluster-" + cluster_name +
+        " --type=merge -p '{\"spec\":{\"k8s_version\":\"" + target_version + "\"}}'"
+    )
+    run_command(command)
+    print("OK")
+    return True
+
+def wait_for_k8s_version_bump(cluster_name, provider, target_minor, timeout_minutes=90):
+    '''Wait for a k8s_version bump initiated by bump_k8s_version() to fully land.
+
+    KeosCluster.status.ready is NOT a reliable completion signal on its own for a
+    multi-minor jump: CAPA advances the real EKS control plane one minor at a time
+    internally, and status.ready can read back True in the brief steady window between
+    two internal minor steps, before the target minor is actually reached (observed
+    live 2026-08-10). For AWS, poll the real EKS control plane version directly via
+    `aws eks describe-cluster` instead of trusting a single ready=true reading.
+
+    GCP/Azure still use the generic KeosCluster.status.ready wait below — not verified
+    against a real bump on those providers yet (see Tasks/PLT-4265/PLAN.md, "Diseño de
+    la integración del bump de k8s_version"). Revisit with a provider-specific poll like
+    the AWS one here if a plain ready=true wait proves insufficient once tested live.'''
+
+    if provider == "aws":
+        print(f"[INFO] Waiting for the real EKS control plane to reach {target_minor} (timeout {timeout_minutes}m):", end=" ", flush=True)
+        deadline = time.time() + timeout_minutes * 60
+        while time.time() < deadline:
+            output, _ = run_command(
+                f"aws eks describe-cluster --name {cluster_name} --query 'cluster.[status,version]' --output text",
+                allow_errors=True
+            )
+            parts = output.split()
+            if len(parts) == 2 and parts[0] == "ACTIVE" and parts[1] == target_minor:
+                print("OK")
+                return
+            time.sleep(30)
+        raise Exception(f"Timed out after {timeout_minutes}m waiting for the EKS control plane to reach {target_minor}")
+
+    print(f"[INFO] Waiting for KeosCluster to be ready after k8s_version bump (timeout {timeout_minutes}m):", end=" ", flush=True)
+    command = (
+        kubectl + " wait --for=jsonpath=\"{.status.ready}\"=true KeosCluster " +
+        cluster_name + " -n cluster-" + cluster_name + f" --timeout {timeout_minutes}m"
+    )
+    run_command(command)
+    print("OK")
+
 def restore_keoscluster_webhooks():
     '''Restore the KEOSCluster webhooks'''
 
@@ -2350,6 +2465,8 @@ if __name__ == '__main__':
 
     stop_keoscluster_controller()
 
+    k8s_version_bumped = False
+
     # Best-effort restore of webhooks/controller on failure before re-raising
     try:
         disable_keoscluster_webhooks()
@@ -2378,6 +2495,12 @@ if __name__ == '__main__':
         upgrade_cluster_api_providers(provider, provider_current_versions)
         print("[INFO] Cluster API providers upgraded successfully")
         restore_capi_capx_ha_replicas(provider)
+
+        # -------------------------------------------------
+        # k8s_version bump (single patch to the final target, see bump_k8s_version()
+        # docstring) — must run while disable_keoscluster_webhooks() is still in effect
+        # -------------------------------------------------
+        k8s_version_bumped = bump_k8s_version(keos_cluster, cluster_name, config["k8s_version"], config["start_from_k8s_version"], config["dry_run"])
     except Exception as e:
         print(f"[ERROR] Critical section failed ({e}) — attempting controlled recovery: restoring webhooks and controller before aborting")
         try:
@@ -2419,13 +2542,19 @@ if __name__ == '__main__':
 
     cluster_name = keos_cluster["metadata"]["name"]
 
-    print("[INFO] Waiting for keoscluster to be ready:", end =" ", flush=True)
+    if k8s_version_bumped:
+        # A k8s_version bump can take much longer than the generic 5m wait below —
+        # CAPA advances the real control plane one minor at a time (see
+        # wait_for_k8s_version_bump() docstring), so wait on the real signal instead.
+        wait_for_k8s_version_bump(cluster_name, provider, config["k8s_version"])
+    else:
+        print("[INFO] Waiting for keoscluster to be ready:", end =" ", flush=True)
 
-    command = (
-        kubectl + " wait --for=jsonpath=\"{.status.ready}\"=true KeosCluster "
-        + cluster_name + " -n cluster-" + cluster_name + " --timeout 5m"
-    )
-    execute_command(command, False)
+        command = (
+            kubectl + " wait --for=jsonpath=\"{.status.ready}\"=true KeosCluster "
+            + cluster_name + " -n cluster-" + cluster_name + " --timeout 5m"
+        )
+        execute_command(command, False)
 
     command = kubectl + " wait deployment -n kube-system keoscluster-controller-manager --for=condition=Available --timeout=5m"
     try:
