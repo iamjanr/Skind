@@ -3,7 +3,7 @@
 
 ##############################################################
 # Author: Stratio Clouds <clouds-integration@stratio.com>    #
-# Supported provisioner versions: 0.17.0-0.8.X              #
+# Supported provisioner versions: 0.9.0                      #
 # Supported cloud providers:                                 #
 #   - EKS (AWS managed)                                      #
 ##############################################################
@@ -27,7 +27,7 @@ KEOS_CLUSTER_NAMESPACE_PREFIX = "cluster-"
 # Target and minimum versions for this migration
 TARGET_CLUSTER_OPERATOR_VERSION = "0.7.0"
 MIN_CLUSTER_OPERATOR_VERSION = "0.7.0"
-MIN_CAPA_VERSION = "v2.9.2"
+MIN_CAPA_VERSION = "v2.9.3"
 
 # Feature gates required for MachinePool support
 REQUIRED_FEATURE_GATES = {
