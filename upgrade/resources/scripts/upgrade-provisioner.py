@@ -43,9 +43,7 @@ CLOUD_PROVISIONER = "0.9.0"
 # patch digit used when patching the CR is always ".0" (EKS/GKE ignore it, it's not a
 # real "install this exact point release" version).
 K8S_VERSION = "1.35"
-# NOTE: milestone build for the 0.9.0 pre-release under test — bump again to the
-# final "0.7.0" (no "-m.N" suffix) once cluster-operator cuts its release.
-CLUSTER_OPERATOR = "0.7.0-m.8"
+CLUSTER_OPERATOR = "0.7.0"
 CLUSTER_OPERATOR_UPGRADE_SUPPORT = "0.5.X"
 CLOUD_PROVISIONER_LAST_PREVIOUS_RELEASE = "0.17.0-0.8"
 
@@ -85,7 +83,7 @@ common_charts = {
         "repo": "https://kubernetes.github.io/autoscaler"
     },
     "cluster-operator": {
-        "version": "0.7.0-m.6",
+        "version": "0.7.0",
         "namespace": "kube-system",
         "repo": ""
     },

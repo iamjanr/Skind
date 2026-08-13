@@ -26,15 +26,7 @@ KEOS_CLUSTER_NAMESPACE_PREFIX = "cluster-"
 
 # Target and minimum versions for this migration
 TARGET_CLUSTER_OPERATOR_VERSION = "0.7.0"
-# NOTE: lowered from 0.6.1 to cover clients upgrading straight from cloud-provisioner
-# 0.7.x (ships cluster-operator 0.5.3) to 0.9.0, skipping 0.8 entirely — explicit
-# product decision. Real MachinePool support in cluster-operator only starts at
-# 0.7.0-m.2 (confirmed: isNodeMachinePool absent in 0.6.2, per PLT-4621) — this gate
-# does NOT guarantee MachinePool support on its own for anything below that. It only
-# makes sense combined with the sequencing this script already assumes: run
-# upgrade-provisioner.py first to bring cluster-operator to TARGET_CLUSTER_OPERATOR_VERSION
-# before running this migration.
-MIN_CLUSTER_OPERATOR_VERSION = "0.5.0"
+MIN_CLUSTER_OPERATOR_VERSION = "0.7.0"
 MIN_CAPA_VERSION = "v2.9.2"
 
 # Feature gates required for MachinePool support
