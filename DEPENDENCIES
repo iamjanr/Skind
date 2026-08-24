@@ -11,7 +11,7 @@ core:
       node-driver-registrar: v3.31.7
       node: v3.31.7
       pod2daemon-flexvol: v3.31.7
-      tigera-operator: v1.40.13
+      tigera-operator: v1.40.15
       typha: v3.31.7
       whisker: v3.31.7
       whisker-backend: v3.31.7
