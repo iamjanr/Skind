@@ -78,21 +78,21 @@ azure:
       infrastructure-components.yaml: v1.21.3
   unmanaged:
     charts:
-      azuredisk-csi-driver: 1.34.4
+      azuredisk-csi-driver: 1.34.5
       azurefile-csi-driver: 1.35.6
       cloud-provider-azure: 1.35.3
     images:
       azure-cloud-controller-manager: v1.35.5
       azure-cloud-node-manager: v1.35.5
-      azuredisk-csi: v1.34.4
+      azuredisk-csi: v1.34.5
       azurefile-csi: v1.35.6
-      csi-attacher: v4.11.0
+      csi-attacher: v4.12.0
       csi-node-driver-registrar: v2.17.0
       csi-provisioner: v6.3.0
       csi-resizer: v2.2.0
-      csi-snapshotter: v8.5.0
+      csi-snapshotter: v8.6.0
       livenessprobe: v2.19.0
-      snapshot-controller: v8.5.0
+      snapshot-controller: v8.6.0
 gcp:
   capg:
     images:
