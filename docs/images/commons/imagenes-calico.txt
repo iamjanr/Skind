@@ -9,4 +9,4 @@ quay.io/calico/typha:v3.31.7
 quay.io/calico/whisker:v3.31.7
 quay.io/calico/whisker-backend:v3.31.7
 quay.io/calico/goldmane:v3.31.7
-quay.io/tigera/operator:v1.40.13
+quay.io/tigera/operator:v1.40.15
