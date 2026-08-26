@@ -969,6 +969,59 @@ spec:
         os.remove(restore_file)
         print("OK")
 
+def capsule_nodes_webhook(action, backup_dir, dry_run):
+    '''Remove/restore capsule's nodes webhook entry — can block a new CP Machine's join (PLT-3295), see Issues/capsule-nodes-webhook-blocks-cp-join.md.'''
+
+    webhook_config = "capsule-validating-webhook-configuration"
+    raw, err = run_command(f"{kubectl} get validatingwebhookconfigurations {webhook_config} -o json", allow_errors=True)
+    if err:
+        return
+    config_json = json.loads(raw)
+    webhook_names = [w["name"] for w in config_json.get("webhooks", [])]
+    if "nodes.capsule.clastix.io" not in webhook_names and action == "patch":
+        return
+
+    capsule_backup_dir = backup_dir + "/capsule"
+    backup_file = capsule_backup_dir + "/nodes-webhook-entry.json"
+
+    if action == "patch":
+        print("[INFO] Removing nodes.capsule.clastix.io webhook for the CP bump:", end=" ", flush=True)
+        if dry_run:
+            print("DRY-RUN")
+            return
+        os.makedirs(capsule_backup_dir, exist_ok=True)
+        nodes_webhook = next(w for w in config_json["webhooks"] if w["name"] == "nodes.capsule.clastix.io")
+        with open(backup_file, 'w') as f:
+            json.dump(nodes_webhook, f)
+        config_json["webhooks"] = [w for w in config_json["webhooks"] if w["name"] != "nodes.capsule.clastix.io"]
+        patch_file = "/tmp/capsule_validating_without_nodes.json"
+        with open(patch_file, 'w') as f:
+            json.dump(config_json, f)
+        run_command(f"{kubectl} replace -f {patch_file}")
+        os.remove(patch_file)
+        print("OK")
+
+    elif action == "restore":
+        print("[INFO] Restoring nodes.capsule.clastix.io webhook:", end=" ", flush=True)
+        if dry_run:
+            print("DRY-RUN")
+            return
+        if not os.path.exists(backup_file):
+            print("SKIPPED (no backup found — entry was already present)")
+            return
+        if "nodes.capsule.clastix.io" in webhook_names:
+            print("SKIPPED (already present)")
+            return
+        with open(backup_file) as f:
+            nodes_webhook = json.load(f)
+        config_json["webhooks"].append(nodes_webhook)
+        patch_file = "/tmp/capsule_validating_with_nodes.json"
+        with open(patch_file, 'w') as f:
+            json.dump(config_json, f)
+        run_command(f"{kubectl} replace -f {patch_file}")
+        os.remove(patch_file)
+        print("OK")
+
 def is_private_registry_enabled(cluster_config):
     '''Return the effective private registry setting'''
 
@@ -2045,6 +2098,7 @@ def bump_k8s_version(keos_cluster, cluster_name, target_minor, start_from_k8s_ve
         wait_for_capi_kcp_version(cluster_name, f"v{major}.{minor}.0")
 
         cp_global_network_policy("patch", keos_cluster, backup_dir, dry_run)
+        capsule_nodes_webhook("patch", backup_dir, dry_run)
         try:
             while (major, minor) != (target_major, target_minor_num):
                 minor += 1
@@ -2082,6 +2136,7 @@ def bump_k8s_version(keos_cluster, cluster_name, target_minor, start_from_k8s_ve
                 print("OK")
         finally:
             cp_global_network_policy("restore", keos_cluster, backup_dir, dry_run)
+            capsule_nodes_webhook("restore", backup_dir, dry_run)
         return True
 
     print(f"[INFO] Patching k8s_version to {target_version}:", end=" ", flush=True)
