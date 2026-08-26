@@ -43,8 +43,33 @@ CLOUD_PROVISIONER = "0.9.0"
 # patch digit used when patching the CR is always ".0" (EKS/GKE ignore it, it's not a
 # real "install this exact point release" version).
 K8S_VERSION = "1.35"
-CLUSTER_OPERATOR = "0.7.0-PLT-4265-01.4"
+CLUSTER_OPERATOR = "0.7.0-PLT-4665.5"
+
+# Flux's own default (5m) is too short for a DaemonSet rollout (maxUnavailable=1) — a
+# fixed value doesn't scale with node count either (verified live 2026-08-25), so
+# compute_helm_release_timeout() below replaces this constant; kept as fallback only.
+HELM_RELEASE_TIMEOUT_FALLBACK = "15m"
+
+_helm_release_timeout_cache = None
+
+def compute_helm_release_timeout():
+    '''Scale the Flux HelmRelease timeout with the real, current node count (workers + CP).'''
+    global _helm_release_timeout_cache
+    if _helm_release_timeout_cache is not None:
+        return _helm_release_timeout_cache
+    nodes_output, _ = run_command(f"{kubectl} get nodes --no-headers", allow_errors=True)
+    node_count = len(nodes_output.strip().splitlines()) if nodes_output else 0
+    if not node_count:
+        _helm_release_timeout_cache = HELM_RELEASE_TIMEOUT_FALLBACK
+    else:
+        minutes = max(15, 5 + node_count * 2)
+        _helm_release_timeout_cache = f"{minutes}m"
+    return _helm_release_timeout_cache
 CLUSTER_OPERATOR_UPGRADE_SUPPORT = "0.5.X"
+
+# Cushion after each minor step converges — CP churn can trigger transient
+# leader-election loss in keoscluster-controller-manager mid-step (see Issues/).
+STEP_SETTLE_SECONDS = 90
 CLOUD_PROVISIONER_LAST_PREVIOUS_RELEASE = "0.17.0-0.8"
 
 CLUSTERCTL = "v1.10.10"
@@ -56,8 +81,8 @@ CAPA = "v2.9.3"
 CAPG = "1.6.1-0.4.0"
 CAPZ = "v1.21.3"
 
-TIGERA_OPERATOR_CALICOCTL_VERSION = "v3.31.6"
-TIGERA_OPERATOR_CONTROLLER_VERSION = "v1.40.13"
+TIGERA_OPERATOR_CALICOCTL_VERSION = "v3.31.7"
+TIGERA_OPERATOR_CONTROLLER_VERSION = "v1.40.15"
 
 # AWS only: official cluster-autoscaler images (any released version, including the
 # one the "cluster-autoscaler" chart entry below points to via its appVersion) still
@@ -69,9 +94,18 @@ TIGERA_OPERATOR_CONTROLLER_VERSION = "v1.40.13"
 # known-good base — replace with an official tagged release once #9693 ships in one.
 CLUSTER_AUTOSCALER_MP_SCALEDOWN_FIX_VERSION = "v1.33.4-fix9693"
 
+# Azure only: cloud-provider-azure's own per-minor image table can reference an
+# unpublished CCM tag (found live 2026-08-20: k8s 1.32 -> v1.32.16, missing everywhere).
+# Mirrors templates/azure/<minor>/cloud-provider-azure-helm-values.tmpl instead.
+CLOUD_PROVIDER_AZURE_CCM_VERSION_BY_MINOR = {
+    "1.32": "v1.34.2",
+    "1.34": "v1.34.2",
+    "1.35": "v1.35.5",
+}
+
 common_charts = {
     "cert-manager": {
-        "version": "v1.20.2",
+        "version": "v1.21.1",
         "namespace": "cert-manager",
         "repo": "https://charts.jetstack.io"
     },
@@ -92,7 +126,7 @@ common_charts = {
         "release_name": "flux"
     },
     "tigera-operator": {
-        "version": "v3.31.6",
+        "version": "v3.31.7",
         "namespace": "tigera-operator",
         "repo": "https://docs.projectcalico.org/charts"
     }
@@ -113,12 +147,12 @@ aws_eks_charts = {
 
 azure_vm_charts = {
     "azuredisk-csi-driver": {
-        "version": "1.34.4",
+        "version": "1.34.5",
         "namespace": "kube-system",
         "repo": "https://raw.githubusercontent.com/kubernetes-sigs/azuredisk-csi-driver/master/charts"
     },
     "azurefile-csi-driver": {
-        "version": "1.35.3",
+        "version": "1.35.6",
         "namespace": "kube-system",
         "repo": "https://raw.githubusercontent.com/kubernetes-sigs/azurefile-csi-driver/master/charts"
     },
@@ -186,6 +220,7 @@ def parse_args():
     parser.add_argument("--skip-preflight-checks", action="store_true", help="Skip cluster health checks before upgrading (NOT recommended: an unhealthy cluster can make the upgrade worse, e.g. a partially-drained node or a CAPI controller stuck at 1 replica)")
     parser.add_argument("--k8s-version", help="Set the target k8s minor version to bump the cluster to (e.g. 1.35). Applied as a single patch to KeosCluster.spec.k8s_version — the KeosCluster webhook's +1-minor-per-patch limit is bypassed the same way the rest of this script already bypasses it for clusterctl", default=K8S_VERSION)
     parser.add_argument("--start-from-k8s-version", action="store_true", help="Skip the interactive Y/N confirmation before bumping k8s_version (the bump itself is still a single patch to --k8s-version, not a resume-from-intermediate-step mechanism)")
+    parser.add_argument("--node-image-map", help='Azure only: JSON map of every intermediate minor to its VM image resource ID, e.g. \'{"1.33":"<id>","1.34":"<id>","1.35":"<id>"}\'. Required for a k8s_version bump on provider=azure — never hardcode a version-to-image table, the caller must supply the right image per minor')
     args = parser.parse_args()
     return vars(args)
 
@@ -673,6 +708,44 @@ def preflight_cluster_health_checks(keos_cluster, cluster_name, provider):
                             allow_errors=True
                         )
 
+    # 7. Missing kubeadm RBAC binding for the apiserver's kubelet client (Azure VMs only, kubeadm-based
+    #    CP) — see Issues/rbac-gap-kubeadm-apiserver-kubelet-client-binding.md. Self-corrects, not blocking.
+    if provider == "azure":
+        binding_out, _ = run_command(
+            f"{kubectl} get clusterrolebinding kubeadm:apiserver-kubelet-client -o name", allow_errors=True
+        )
+        if not binding_out.strip():
+            role_out, _ = run_command(
+                f"{kubectl} get clusterrole system:kubelet-api-admin -o name", allow_errors=True
+            )
+            if role_out.strip():
+                import tempfile
+                print("    [WARN] ClusterRoleBinding kubeadm:apiserver-kubelet-client is missing "
+                      "(kubeadm bootstrap step) — without it CAPI's etcd health checks can hang "
+                      "a k8s_version bump indefinitely. Creating it now.")
+                with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+                    f.write(
+                        "apiVersion: rbac.authorization.k8s.io/v1\n"
+                        "kind: ClusterRoleBinding\n"
+                        "metadata:\n"
+                        "  name: kubeadm:apiserver-kubelet-client\n"
+                        "roleRef:\n"
+                        "  apiGroup: rbac.authorization.k8s.io\n"
+                        "  kind: ClusterRole\n"
+                        "  name: system:kubelet-api-admin\n"
+                        "subjects:\n"
+                        "  - kind: User\n"
+                        "    name: kube-apiserver-kubelet-client\n"
+                        "    apiGroup: rbac.authorization.k8s.io\n"
+                    )
+                    manifest_path = f.name
+                run_command(f"{kubectl} apply -f {manifest_path}", allow_errors=True)
+                os.unlink(manifest_path)
+            else:
+                print("    [WARN] ClusterRoleBinding kubeadm:apiserver-kubelet-client is missing, but "
+                      "the built-in role system:kubelet-api-admin is also missing — skipping auto-fix "
+                      "(unexpected apiserver bootstrap state, needs manual investigation)")
+
     if not problems:
         print("    OK: no issues found")
         return
@@ -697,11 +770,15 @@ SENSITIVE_ENV_VARS = [
     "AZURE_CLIENT_SECRET_B64",
 ]
 
+SENSITIVE_CLI_FLAGS = ["--password", "--client-secret", "-p"]
+
 def redact_command(command):
-    '''Redact known sensitive env var assignments before logging/raising a command string'''
+    '''Redact known sensitive env var assignments and CLI secret flags before logging/raising a command string'''
     safe_command = command
     for var in SENSITIVE_ENV_VARS:
         safe_command = re.sub(rf"{var}=\S+", f"{var}=<redacted>", safe_command)
+    for flag in SENSITIVE_CLI_FLAGS:
+        safe_command = re.sub(rf"(?<!\S){re.escape(flag)}\s+\S+", f"{flag} <redacted>", safe_command)
     return safe_command
 
 def run_command(command, allow_errors=False, retries=3, retry_delay=2):
@@ -818,6 +895,80 @@ def get_pods_cidr(keos_cluster):
     except KeyError:
         return ""
 
+def cp_global_network_policy(action, keos_cluster, backup_dir, dry_run):
+    '''Widen/restore the Calico allow-all-traffic-from-control-plane GNP around a CP
+    version bump (Azure) — ported from Skind 0.17.0-0.7.5, see Issues/cp-global-network-policy-gap.md.'''
+
+    check_cmd = f"{kubectl} get GlobalNetworkPolicy allow-all-traffic-from-control-plane"
+    _, err = run_command(check_cmd, allow_errors=True)
+    if err:
+        return
+
+    calico_backup_dir = backup_dir + "/calico"
+    backup_file = calico_backup_dir + "/allow-all-traffic-from-control-plane_gnp.yaml"
+
+    if action == "patch":
+        print("[INFO] Applying temporary allow-control-plane GlobalNetworkPolicy:", end=" ", flush=True)
+        if dry_run:
+            print("DRY-RUN")
+            return
+        os.makedirs(calico_backup_dir, exist_ok=True)
+        run_command(f"{kubectl} get GlobalNetworkPolicy allow-all-traffic-from-control-plane -o yaml > {backup_file}")
+
+        networks = keos_cluster["spec"].get("networks", {})
+        vpc_cidr = networks.get("vpc_cidr", "10.0.0.0/16")
+        pods_cidr = networks.get("pods_cidr", "192.168.0.0/16")
+        patch = {"spec": {"order": 0, "selector": "all()", "ingress": [
+            {"action": "Allow", "source": {"nets": [vpc_cidr, pods_cidr]}}
+        ]}}
+        patch_file = "/tmp/allow_cp_temporal_gnp.yaml"
+        with open(patch_file, 'w') as f:
+            yaml.dump(patch, f, default_flow_style=False)
+        run_command(f"{kubectl} patch GlobalNetworkPolicy allow-all-traffic-from-control-plane --type merge --patch-file {patch_file}")
+        os.remove(patch_file)
+        print("OK")
+
+    elif action == "restore":
+        print("[INFO] Restoring allow-control-plane GlobalNetworkPolicy:", end=" ", flush=True)
+        if dry_run:
+            print("DRY-RUN")
+            return
+        encapsulation = "vxlan"
+        nodes_raw, _ = run_command(f"{kubectl} get node -lkubernetes.io/os=linux,node-role.kubernetes.io/control-plane= -o json")
+        control_plane_nodes = json.loads(nodes_raw)
+        rendered = Template('''
+apiVersion: crd.projectcalico.org/v1
+kind: GlobalNetworkPolicy
+metadata:
+  name: allow-all-traffic-from-control-plane
+spec:
+  order: 0
+  selector: all()
+  ingress:
+  - action: Allow
+    source:
+      nets:
+{% for item in control_plane_nodes['items'] %}
+{% set node = item.metadata %}
+{% if 'projectcalico.org/IPv4IPIPTunnelAddr' in node.annotations %}
+      - {{ node.annotations['projectcalico.org/IPv4IPIPTunnelAddr'] }}/32
+{% elif 'projectcalico.org/IPv4VXLANTunnelAddr' in node.annotations %}
+      - {{ node.annotations['projectcalico.org/IPv4VXLANTunnelAddr'] }}/32
+{% endif %}
+{% for address in item.status.addresses %}
+{% if address.type == 'InternalIP' %}
+      - {{ address.address }}/32
+{% endif %}
+{% endfor %}
+{% endfor %}
+''').render(control_plane_nodes=control_plane_nodes, encapsulation=encapsulation)
+        restore_file = "/tmp/allow_cp_gnp.yaml"
+        with open(restore_file, 'w') as f:
+            f.write(rendered)
+        run_command(f"{kubectl} patch GlobalNetworkPolicy allow-all-traffic-from-control-plane --type merge --patch-file {restore_file}")
+        os.remove(restore_file)
+        print("OK")
+
 def is_private_registry_enabled(cluster_config):
     '''Return the effective private registry setting'''
 
@@ -906,6 +1057,34 @@ def update_cluster_autoscaler_image_tag_value(values_file):
         image['tag'] = CLUSTER_AUTOSCALER_MP_SCALEDOWN_FIX_VERSION
         if 'repository' in image:
             image['repository'] = image['repository'].replace('/k8s/autoscaling', '/autoscaling')
+
+        with open(values_file, 'w') as file:
+            yaml.safe_dump(values, file, default_flow_style=False)
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+def update_cloud_provider_azure_image_tag_value(values_file):
+    '''Pin CCM/cloud-node-manager imageTag to a known-published version for the
+    cluster's CURRENT k8s minor (chart upgrades run before bump_k8s_version()).'''
+
+    try:
+        current_minor = ".".join(keos_cluster["spec"]["k8s_version"].lstrip("v").split(".")[:2])
+        ccm_tag = CLOUD_PROVIDER_AZURE_CCM_VERSION_BY_MINOR.get(current_minor)
+        if not ccm_tag:
+            print(f"[WARN] No known-good cloud-provider-azure CCM tag for k8s {current_minor} — leaving chart defaults as-is")
+            return
+
+        with open(values_file, 'r') as file:
+            values = yaml.safe_load(file)
+
+        for component in ("cloudControllerManager", "cloudNodeManager"):
+            section = values.setdefault(component, {})
+            repo = section.get("imageRepository", "")
+            if repo and "/oss/v2/kubernetes" not in repo:
+                repo = repo.replace("/oss/kubernetes", "/oss/v2/kubernetes")
+            section["imageRepository"] = repo
+            section["imageTag"] = ccm_tag
 
         with open(values_file, 'w') as file:
             yaml.safe_dump(values, file, default_flow_style=False)
@@ -1006,6 +1185,12 @@ def apply_chart_crds(chart_name, chart_version, repo_url, repo_schema):
                 if ".dkr.ecr." in registry:
                     region = registry.split(".")[3]
                     run_command(f"aws ecr get-login-password --region {region} | {helm} registry login {registry} --username AWS --password-stdin")
+                elif ".azurecr.io" in registry:
+                    acr_name = registry.split(".")[0]
+                    run_command(
+                        f"az acr login --name {acr_name} --expose-token --output tsv --query accessToken | "
+                        f"{helm} registry login {registry} --username 00000000-0000-0000-0000-000000000000 --password-stdin"
+                    )
                 pull_cmd = f"{helm} pull {repo_url}/{chart_name} --version {chart_version} -d {tmpdir}"
             else:
                 pull_cmd = f"{helm} pull {chart_name} --repo {repo_url} --version {chart_version} -d {tmpdir}"
@@ -1038,7 +1223,7 @@ def apply_chart_crds(chart_name, chart_version, repo_url, repo_schema):
             print(f"WARN ({e}) — continuing without CRD update")
 
 
-def wait_for_helmrelease_ready(release_name, namespace, timeout="3m"):
+def wait_for_helmrelease_ready(release_name, namespace, timeout="15m"):
     '''Wait for a HelmRelease to report Ready=True, raising with the real status on failure'''
 
     command = f"{kubectl} wait helmrelease {release_name} -n {namespace} --for=condition=Ready --timeout={timeout}"
@@ -1051,45 +1236,58 @@ def wait_for_helmrelease_ready(release_name, namespace, timeout="3m"):
         )
         raise Exception(f"HelmRelease {namespace}/{release_name} not Ready: {status_output}") from e
 
-def check_release_pods_healthy(chart_name, release_name, namespace):
-    '''Best-effort check that the release's pods are actually healthy, not just Ready in Flux'''
+def check_release_pods_healthy(chart_name, release_name, namespace, timeout_seconds=300, poll_interval=5):
+    '''Best-effort check that the release's pods are actually healthy, not just Ready in Flux.
+    Retries for up to timeout_seconds — a rollout in progress can transiently look unhealthy.'''
 
-    pods = []
-    for selector in (f"app.kubernetes.io/instance={release_name}", f"app.kubernetes.io/name={chart_name}", f"k8s-app={chart_name}"):
-        pods_json, _ = run_command(f"{kubectl} get pods -n {namespace} -l {selector} -o json", allow_errors=True)
-        if pods_json:
-            try:
-                pods = json.loads(pods_json).get("items", [])
-            except Exception:
-                pods = []
-            if pods:
-                break
+    def get_pods():
+        for selector in (f"app.kubernetes.io/instance={release_name}", f"app.kubernetes.io/name={chart_name}", f"k8s-app={chart_name}"):
+            pods_json, _ = run_command(f"{kubectl} get pods -n {namespace} -l {selector} -o json", allow_errors=True)
+            if pods_json:
+                try:
+                    pods = json.loads(pods_json).get("items", [])
+                except Exception:
+                    pods = []
+                if pods:
+                    return pods
+        return []
 
+    def evaluate(pods):
+        unhealthy = []
+        for pod in pods:
+            pod_name = pod["metadata"]["name"]
+            phase = pod.get("status", {}).get("phase")
+            container_statuses = pod.get("status", {}).get("containerStatuses", [])
+            bad_reasons = [
+                cs["state"]["waiting"]["reason"]
+                for cs in container_statuses
+                if "waiting" in cs.get("state", {}) and cs["state"]["waiting"].get("reason") in
+                   ("CrashLoopBackOff", "ImagePullBackOff", "ErrImagePull", "CreateContainerConfigError")
+            ]
+            all_ready = all(cs.get("ready", False) for cs in container_statuses) if container_statuses else False
+            if phase not in ("Running", "Succeeded") or bad_reasons or not all_ready:
+                unhealthy.append((pod_name, phase, bad_reasons))
+        return unhealthy
+
+    pods = get_pods()
     if not pods:
         print(f"(pod health check skipped for {release_name}: no pods matched known labels)", end=" ")
         return
 
-    unhealthy = []
-    for pod in pods:
-        pod_name = pod["metadata"]["name"]
-        phase = pod.get("status", {}).get("phase")
-        container_statuses = pod.get("status", {}).get("containerStatuses", [])
-        bad_reasons = [
-            cs["state"]["waiting"]["reason"]
-            for cs in container_statuses
-            if "waiting" in cs.get("state", {}) and cs["state"]["waiting"].get("reason") in
-               ("CrashLoopBackOff", "ImagePullBackOff", "ErrImagePull", "CreateContainerConfigError")
-        ]
-        all_ready = all(cs.get("ready", False) for cs in container_statuses) if container_statuses else False
-        if phase not in ("Running", "Succeeded") or bad_reasons or not all_ready:
-            unhealthy.append((pod_name, phase, bad_reasons))
+    elapsed = 0
+    unhealthy = evaluate(pods)
+    while unhealthy and elapsed < timeout_seconds:
+        time.sleep(poll_interval)
+        elapsed += poll_interval
+        pods = get_pods() or pods
+        unhealthy = evaluate(pods)
 
     if unhealthy:
         details = []
         for pod_name, phase, bad_reasons in unhealthy:
             describe_output, _ = run_command(f"{kubectl} describe pod {pod_name} -n {namespace}", allow_errors=True)
             details.append(f"--- {pod_name} (phase={phase}, reasons={bad_reasons}) ---\n{describe_output[-1500:]}")
-        raise Exception(f"{len(unhealthy)} unhealthy pod(s) for release {release_name}:\n" + "\n".join(details))
+        raise Exception(f"{len(unhealthy)} unhealthy pod(s) for release {release_name} after {timeout_seconds}s:\n" + "\n".join(details))
 
 def upgrade_chart(chart_name, chart_data):
     '''Update chart HelmRelease'''
@@ -1142,6 +1340,8 @@ def upgrade_chart(chart_name, chart_data):
             update_tigera_operator_image_tag_value(default_values_file)
         elif release_name == "cluster-autoscaler" and provider == "aws":
             update_cluster_autoscaler_image_tag_value(default_values_file)
+        elif release_name == "cloud-provider-azure" and provider == "azure":
+            update_cloud_provider_azure_image_tag_value(default_values_file)
 
         create_empty_values_file(empty_values_file)
 
@@ -1168,7 +1368,8 @@ def upgrade_chart(chart_name, chart_data):
             'ChartRepoRef': repo_name,
             'HelmReleaseSourceInterval': '1m',
             'HelmReleaseInterval': '1m',
-            'HelmReleaseRetries': 3
+            'HelmReleaseRetries': 3,
+            'HelmReleaseTimeout': compute_helm_release_timeout()
         }
 
         if chart_name == "cluster-operator":
@@ -1192,7 +1393,7 @@ def upgrade_chart(chart_name, chart_data):
 
         # cluster-operator has its own dedicated wait right after upgrade_charts() returns
         if chart_name != "cluster-operator":
-            wait_for_helmrelease_ready(release_name, chart_namespace)
+            wait_for_helmrelease_ready(release_name, chart_namespace, timeout=compute_helm_release_timeout())
             check_release_pods_healthy(chart_name, release_name, chart_namespace)
 
         print("OK")
@@ -1770,26 +1971,10 @@ def parse_k8s_minor(version):
         raise ValueError(f"Cannot parse k8s version: {version}")
     return (int(match.group(1)), int(match.group(2)))
 
-def bump_k8s_version(keos_cluster, cluster_name, target_minor, start_from_k8s_version, dry_run):
-    '''Patch KeosCluster.spec.k8s_version to target_minor in a single step.
-
-    Single patch to the final target, not a sequential 1.32->1.33->1.34->1.35 walk: CAPA
-    advances the real EKS control plane one minor at a time on its own (verified live
-    2026-08-10 via `aws eks list-updates`/`describe-update`: a direct 1.32->1.35 patch on
-    a management cluster produced two distinct VersionUpdate operations, 1.33 and 1.34,
-    never a direct jump). The KeosCluster webhook's own +1-minor-per-patch limit
-    (keoscluster_webhook.go:1313 isValidUpgrade) is bypassed the same way the rest of
-    this critical section already bypasses it — this function must run while
-    disable_keoscluster_webhooks() is in effect, same as the clusterctl upgrade above.
-
-    Legacy MachineDeployment workers are NOT paused here: PLT-4621's fix
-    (resolveNodeKind()) already pins them to their current template when node_image=""
-    without any special-casing in this script, validated live end-to-end against
-    eks-4265-hprod-1 (see Tasks/misc/cluster-operator/worker-node-kind-mismatch/
-    validacion-en-vivo.md).
-
-    Returns True if a bump was actually initiated (patch applied), False if skipped
-    (already at target, or not confirmed).'''
+def bump_k8s_version(keos_cluster, cluster_name, target_minor, start_from_k8s_version, dry_run, provider=None, node_image_map=None):
+    '''AWS/GCP: single patch to target_minor (CAPA/GKE step it internally, see
+    verify_control_plane_patch_propagated()). Azure: steps the CP one minor at a
+    time via node_image_map (2026-08-24: a direct jump stuck old-etcd CP replicas).'''
 
     current_version = keos_cluster["spec"]["k8s_version"]
     current_minor = parse_k8s_minor(current_version)
@@ -1797,6 +1982,12 @@ def bump_k8s_version(keos_cluster, cluster_name, target_minor, start_from_k8s_ve
 
     if current_minor == target_minor_tuple:
         print(f"[INFO] k8s_version already at target {target_minor}: SKIP")
+        if provider == "azure":
+            # Resuming after a crash right at the final step: k8s_version already matches
+            # target, but the worker rollout it triggered may not have converged yet.
+            for wn in keos_cluster["spec"].get("worker_nodes", []):
+                if wn.get("node_image"):
+                    wait_for_capi_md_convergence(cluster_name, wn["name"], current_version)
         return False
     if current_minor > target_minor_tuple:
         # A plain Exception, not sys.exit(): this runs inside the critical section's
@@ -1807,6 +1998,14 @@ def bump_k8s_version(keos_cluster, cluster_name, target_minor, start_from_k8s_ve
 
     target_version = f"v{target_minor}.0"
     print(f"[INFO] Planned k8s_version bump: {current_version} -> {target_version}")
+    if provider == "azure":
+        steps = []
+        step_major, step_minor = current_minor
+        target_major, target_minor_num = target_minor_tuple
+        while (step_major, step_minor) != (target_major, target_minor_num):
+            step_minor += 1
+            steps.append(f"v{step_major}.{step_minor}.0")
+        print(f"[INFO] Control plane will step through each minor in order: {' -> '.join([current_version] + steps)}")
 
     if dry_run:
         print("[INFO] Bumping k8s_version: DRY-RUN")
@@ -1822,6 +2021,69 @@ def bump_k8s_version(keos_cluster, cluster_name, target_minor, start_from_k8s_ve
                 break
             print("[WARN] Please answer 'y' or 'n'")
 
+    if provider == "azure":
+        if not node_image_map:
+            raise Exception("provider=azure requires --node-image-map for a k8s_version bump")
+        try:
+            image_map = json.loads(node_image_map) if isinstance(node_image_map, str) else node_image_map
+        except Exception as e:
+            raise Exception(f"--node-image-map is not valid JSON: {e}")
+
+        bad_images = {k: v for k, v in image_map.items() if not str(v).startswith("/subscriptions/")}
+        if bad_images:
+            raise Exception(
+                f"--node-image-map values must be full Azure resource IDs (starting with "
+                f"'/subscriptions/...'), not bare image names: {bad_images}"
+            )
+
+        major, minor = current_minor
+        target_major, target_minor_num = target_minor_tuple
+
+        # Resuming after an interrupted run: KeosCluster.spec.k8s_version may already say
+        # the current step, but that doesn't mean it converged — verify for real before
+        # stepping any further, see Issues/bump-resume-skips-convergence-check.md.
+        wait_for_capi_kcp_version(cluster_name, f"v{major}.{minor}.0")
+
+        cp_global_network_policy("patch", keos_cluster, backup_dir, dry_run)
+        try:
+            while (major, minor) != (target_major, target_minor_num):
+                minor += 1
+                step_version = f"v{major}.{minor}.0"
+                step_key = f"{major}.{minor}"
+                step_image = image_map.get(step_key)
+                if not step_image:
+                    raise Exception(f"--node-image-map is missing an entry for minor {step_key}")
+
+                print(f"[INFO] Stepping control plane to {step_version}:", end=" ", flush=True)
+                ops = [
+                    {"op": "replace", "path": "/spec/k8s_version", "value": step_version},
+                    {"op": "replace", "path": "/spec/control_plane/node_image", "value": step_image},
+                ]
+                # cluster-operator bumps every worker MD's spec.version at EACH step
+                # regardless of node_image (see below) — patch node_image here too, every
+                # step, so the replaced Machine actually boots the matching kubelet.
+                for i, wn in enumerate(keos_cluster["spec"].get("worker_nodes", [])):
+                    if wn.get("node_image"):
+                        ops.append({"op": "replace", "path": f"/spec/worker_nodes/{i}/node_image", "value": step_image})
+                command = (
+                    kubectl + " patch keoscluster " + cluster_name + " -n cluster-" + cluster_name +
+                    " --type=json -p '" + json.dumps(ops) + "'"
+                )
+                run_command(command)
+                print("OK")
+                wait_for_capi_kcp_version(cluster_name, step_version)
+                # Wait for the real rollout this step's patch triggered (both k8s_version
+                # and node_image now change together, see comment above).
+                for wn in keos_cluster["spec"].get("worker_nodes", []):
+                    if wn.get("node_image"):
+                        wait_for_capi_md_convergence(cluster_name, wn["name"], step_version)
+                print(f"[INFO] Letting the cluster settle for {STEP_SETTLE_SECONDS}s before the next step:", end=" ", flush=True)
+                time.sleep(STEP_SETTLE_SECONDS)
+                print("OK")
+        finally:
+            cp_global_network_policy("restore", keos_cluster, backup_dir, dry_run)
+        return True
+
     print(f"[INFO] Patching k8s_version to {target_version}:", end=" ", flush=True)
     command = (
         kubectl + " patch keoscluster " + cluster_name + " -n cluster-" + cluster_name +
@@ -1832,26 +2094,8 @@ def bump_k8s_version(keos_cluster, cluster_name, target_minor, start_from_k8s_ve
     return True
 
 def verify_control_plane_patch_propagated(cluster_name, target_minor, timeout_seconds=120, poll_interval=10):
-    '''Verify cluster-operator actually propagated the k8s_version bump to the
-    AWSManagedControlPlane object before entering the long AWS-side wait.
-
-    Known cluster-operator gap (controllers/keoscluster_controller.go, "Step 2" of
-    Reconcile): if the cluster-operator.stratio.com/last-configuration annotation is
-    missing/empty on the reconcile that runs right after bump_k8s_version() patches
-    KeosCluster.spec.k8s_version — e.g. because keoscluster-controller-manager was
-    restarted mid-upgrade by this same script (stop -> patch -> start) and the
-    annotation was reset in between — the reconciler treats that pass as a first-time
-    sync: it writes the annotation to match the already-bumped spec and returns
-    WITHOUT ever comparing against the previous k8s_version or patching
-    AWSManagedControlPlane. KeosCluster.spec.k8s_version ends up bumped while the real
-    infrastructure object — and therefore AWS itself — never receives the change, and
-    no EKS update is ever started. Without this check, wait_for_k8s_version_bump()
-    below would silently poll AWS for up to 90 minutes for a version bump that was
-    never actually requested. Confirmed live 2026-08-17 against eks-4265-hprod-2:
-    AWSManagedControlPlane.spec.version stayed at the old version and `aws eks
-    list-updates` showed zero version updates for the entire wait window; manually
-    resetting the annotation's embedded k8s_version to the old value made the very
-    next reconcile detect the diff and patch the control plane correctly.'''
+    '''Verify the k8s_version bump reached AWSManagedControlPlane before the long
+    AWS-side wait — see Issues/ (PLT-4265) for the annotation-resync gap this guards.'''
 
     target_version = f"v{target_minor}.0"
     print(f"[INFO] Verifying cluster-operator propagated the bump to AWSManagedControlPlane (timeout {timeout_seconds}s):", end=" ", flush=True)
@@ -1885,10 +2129,12 @@ def wait_for_k8s_version_bump(cluster_name, provider, target_minor, timeout_minu
     live 2026-08-10). For AWS, poll the real EKS control plane version directly via
     `aws eks describe-cluster` instead of trusting a single ready=true reading.
 
-    GCP/Azure still use the generic KeosCluster.status.ready wait below — not verified
-    against a real bump on those providers yet (see Tasks/PLT-4265/PLAN.md, "Diseño de
-    la integración del bump de k8s_version"). Revisit with a provider-specific poll like
-    the AWS one here if a plain ready=true wait proves insufficient once tested live.'''
+    Azure: the CP already converged step by step inside bump_k8s_version() via
+    wait_for_capi_kcp_version(), so this only needs to confirm the target_minor itself —
+    reuse that same real-convergence check instead of the generic ready==true wait.
+
+    GCP still uses the generic KeosCluster.status.ready wait below — not verified against
+    a real bump on that provider yet (see Tasks/PLT-4265/PLAN.md).'''
 
     if provider == "aws":
         verify_control_plane_patch_propagated(cluster_name, target_minor)
@@ -1905,6 +2151,10 @@ def wait_for_k8s_version_bump(cluster_name, provider, target_minor, timeout_minu
                 return
             time.sleep(30)
         raise Exception(f"Timed out after {timeout_minutes}m waiting for the EKS control plane to reach {target_minor}")
+
+    if provider == "azure":
+        wait_for_capi_kcp_version(cluster_name, f"v{target_minor}.0", timeout_minutes)
+        return
 
     print(f"[INFO] Waiting for KeosCluster to be ready after k8s_version bump (timeout {timeout_minutes}m):", end=" ", flush=True)
     command = (
@@ -1946,6 +2196,83 @@ def restore_keoscluster_webhooks():
         print("FAILED")
         print(f"[ERROR] Error restoring KEOSCluster webhooks from backup: {e}")
         raise e
+
+def wait_for_capi_md_convergence(cluster_name, wn_name, target_version, timeout_minutes=90):
+    '''Wait for every worker MachineDeployment of wn_name to converge on target_version —
+    checks the real kubeletVersion on each Node, not just spec.version (a Machine can say
+    the right version while still running the old node_image's kubelet, see PLAN.md).'''
+
+    cp_namespace = "cluster-" + cluster_name
+    target_minor_prefix = "v" + ".".join(target_version.lstrip("v").split(".")[:2])
+    print(f"[INFO] Waiting for the real worker nodes ({wn_name}) to reach {target_version} (timeout {timeout_minutes}m):", end=" ", flush=True)
+    deadline = time.time() + timeout_minutes * 60
+    while time.time() < deadline:
+        output, _ = run_command(
+            f"{kubectl} get machinedeployment -n {cp_namespace} -o json",
+            allow_errors=True
+        )
+        nodes_output, _ = run_command(f"{kubectl} get nodes -o json", allow_errors=True)
+        try:
+            mds = [
+                md for md in json.loads(output).get("items", [])
+                if md.get("metadata", {}).get("name", "").startswith(f"{wn_name}-md-")
+            ]
+            spec_converged = bool(mds) and all(
+                md.get("spec", {}).get("template", {}).get("spec", {}).get("version") == target_version and
+                md.get("status", {}).get("phase") == "Running" and
+                md.get("status", {}).get("unavailableReplicas", 0) in (0, None) and
+                md.get("status", {}).get("replicas") == md.get("status", {}).get("readyReplicas") == md.get("status", {}).get("updatedReplicas")
+                for md in mds
+            )
+            wn_nodes = [
+                node for node in json.loads(nodes_output).get("items", [])
+                if node.get("metadata", {}).get("name", "").startswith(f"{wn_name}-md-")
+            ]
+            kubelet_converged = bool(wn_nodes) and all(
+                node.get("status", {}).get("nodeInfo", {}).get("kubeletVersion", "").startswith(target_minor_prefix)
+                for node in wn_nodes
+            )
+            converged = spec_converged and kubelet_converged and len(wn_nodes) == sum(md.get("status", {}).get("replicas", 0) for md in mds)
+        except (ValueError, TypeError):
+            converged = False
+        if converged:
+            print("OK")
+            return
+        time.sleep(10)
+    raise Exception(f"Timed out after {timeout_minutes}m waiting for worker nodes ({wn_name}) to reach {target_version}")
+
+def wait_for_capi_kcp_version(cluster_name, target_version, timeout_minutes=90):
+    '''Wait for the real CP rollout to converge on target_version, not just spec.version —
+    see Issues/kcp-convergence-wait-too-weak.md.'''
+
+    kcp_name = cluster_name + "-control-plane"
+    cp_namespace = "cluster-" + cluster_name
+    print(f"[INFO] Waiting for the real control plane to reach {target_version} (timeout {timeout_minutes}m):", end=" ", flush=True)
+    deadline = time.time() + timeout_minutes * 60
+    while time.time() < deadline:
+        output, _ = run_command(
+            f"{kubectl} get kubeadmcontrolplane {kcp_name} -n {cp_namespace} -o json",
+            allow_errors=True
+        )
+        try:
+            kcp = json.loads(output)
+            status = kcp.get("status", {})
+            desired_replicas = kcp.get("spec", {}).get("replicas")
+            replicas = status.get("replicas")
+            ready_replicas = status.get("readyReplicas")
+            updated_replicas = status.get("updatedReplicas")
+            converged = (
+                status.get("version") == target_version and
+                status.get("ready") is True and
+                replicas == ready_replicas == updated_replicas == desired_replicas
+            )
+        except (ValueError, TypeError):
+            converged = False
+        if converged:
+            print("OK")
+            return
+        time.sleep(10)
+    raise Exception(f"Timed out after {timeout_minutes}m waiting for KubeadmControlPlane to converge on {target_version}")
 
 def start_keoscluster_controller():
     '''Start the KEOSCluster controller'''
@@ -2536,6 +2863,18 @@ if __name__ == '__main__':
     if not config["disable_prepare_capsule"]:
         restore_capsule(config["dry_run"])
 
+    # A run killed mid critical-section can leave spec.suspend=true behind, which Flux
+    # never reconciles — the wait below would then loop until timeout on every re-run
+    # (kubectl requires observedGeneration>=generation, wait/condition.go:73-74).
+    suspend_check, _ = run_command(
+        f"{kubectl} get helmrelease cluster-operator -n kube-system -o jsonpath='{{.spec.suspend}}'",
+        allow_errors=True
+    )
+    if suspend_check.strip() == "true":
+        print("[WARN] cluster-operator helmrelease is suspended (leftover from a previously interrupted run) — unsuspending before waiting:", end=" ", flush=True)
+        run_command(f"{kubectl} patch helmrelease cluster-operator -n kube-system --type merge --patch '{{\"spec\":{{\"suspend\":false}}}}'")
+        print("OK")
+
     print("[INFO] Waiting for the cluster-operator helmrelease to be ready:", end=" ", flush=True)
     command = f"{kubectl} wait helmrelease cluster-operator -n kube-system --for=condition=Ready --timeout=5m"
     try:
@@ -2548,31 +2887,40 @@ if __name__ == '__main__':
         print(f"[INFO] HelmRelease status: {status_output}")
         raise e
     print("[INFO] Upgrading Cluster Operator components...")
-    print("[INFO] Suspending cluster-operator helmrelease:", end =" ", flush=True)
 
-    command = kubectl + " patch helmrelease cluster-operator -n kube-system --type merge --patch '{\"spec\":{\"suspend\":true}}'"
-    run_command(command)
-    print("OK")
-
-    print("[INFO] Verifying KeosCluster is ready/Provisioned before this critical section:", end=" ", flush=True)
-    ready_output, _ = run_command(
-        f"{kubectl} get keoscluster {cluster_name} -n cluster-{cluster_name} -o jsonpath='{{.status.ready}} {{.status.phase}}'",
-        allow_errors=True
-    )
-    ready_parts = ready_output.split()
-    if len(ready_parts) != 2 or ready_parts[0] != "true" or ready_parts[1] != "Provisioned":
-        print("FAILED")
-        raise Exception(
-            f"KeosCluster is not ready/Provisioned before this critical section "
-            f"(status: '{ready_output}') — refusing to proceed on top of an unsettled cluster. "
-            f"Investigate and re-run once status.ready=true and status.phase=Provisioned."
-        )
-    print("OK")
-
-    stop_keoscluster_controller()
-
-    # Best-effort restore of webhooks/controller on failure before re-raising
+    # Recovery (except block below) must cover every step from here on — a failure in
+    # any of them (e.g. 2026-08-24: the ready/Provisioned check) must not leave the
+    # HelmRelease suspended or webhooks/controller in a half-touched state.
     try:
+        print("[INFO] Suspending cluster-operator helmrelease:", end =" ", flush=True)
+        command = kubectl + " patch helmrelease cluster-operator -n kube-system --type merge --patch '{\"spec\":{\"suspend\":true}}'"
+        run_command(command)
+        print("OK")
+
+        print("[INFO] Verifying KeosCluster is ready/Provisioned before this critical section:", end=" ", flush=True)
+        # 60s wasn't enough margin for the last Machine of a MachineDeployment to finish
+        # replacing (seen live 2026-08-26: took 95s) — raised to 5min.
+        deadline = time.time() + 300
+        while True:
+            ready_output, _ = run_command(
+                f"{kubectl} get keoscluster {cluster_name} -n cluster-{cluster_name} -o jsonpath='{{.status.ready}} {{.status.phase}}'",
+                allow_errors=True
+            )
+            ready_parts = ready_output.split()
+            if len(ready_parts) == 2 and ready_parts[0] == "true" and ready_parts[1] == "Provisioned":
+                break
+            if time.time() >= deadline:
+                print("FAILED")
+                raise Exception(
+                    f"KeosCluster is not ready/Provisioned before this critical section "
+                    f"(status: '{ready_output}') — refusing to proceed on top of an unsettled cluster. "
+                    f"Investigate and re-run once status.ready=true and status.phase=Provisioned."
+                )
+            time.sleep(5)
+        print("OK")
+
+        stop_keoscluster_controller()
+
         disable_keoscluster_webhooks()
         update_clusterconfig(cluster_config, charts_to_upgrade, provider, cluster_operator_version)
 
@@ -2600,19 +2948,16 @@ if __name__ == '__main__':
         print("[INFO] Cluster API providers upgraded successfully")
         restore_capi_capx_ha_replicas(provider)
 
-        # -------------------------------------------------
-        # k8s_version bump — back to the pattern verified live end-to-end on
-        # 2026-08-13 against eks-4265-hprod-1 (real AWS control plane reached
-        # ACTIVE/1.35, independently confirmed via `aws eks describe-cluster`):
-        # patch while the controller is still stopped and webhooks still disabled,
-        # in the SAME critical section as the CAPI providers upgrade above. The
-        # controller only starts once, at the very end, after the patch already
-        # landed. A same-day alternative (patch with the controller left running,
-        # added 2026-08-17 to work around a suspected cold-start issue) reproduced
-        # the same silent-skip symptom 2 more times despite added safeguards — so
-        # reverting to the one design with a real, independently-verified success.
-        # -------------------------------------------------
-        k8s_version_bumped = bump_k8s_version(keos_cluster, cluster_name, config["k8s_version"], config["start_from_k8s_version"], config["dry_run"])
+        # Azure only: its controller is the only thing that writes
+        # KubeadmControlPlane.spec.version — must run for the stepped bump below.
+        # Stepping 1 minor at a time never trips the CAPI webhook, nothing to disable.
+        if provider == "azure":
+            start_keoscluster_controller()
+
+        # k8s_version bump — controller stays stopped until the end for AWS/GCP (see
+        # bump_k8s_version() docstring); Azure steps the CP one minor at a time
+        # instead (2026-08-24: a direct jump left old-etcd CP replicas stuck).
+        k8s_version_bumped = bump_k8s_version(keos_cluster, cluster_name, config["k8s_version"], config["start_from_k8s_version"], config["dry_run"], provider=provider, node_image_map=config["node_image_map"])
     except Exception as e:
         print(f"[ERROR] Critical section failed ({e}) — attempting controlled recovery: restoring webhooks and controller before aborting")
         try:
