@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## 0.9.0 (upcoming)
+## 0.10.0 (upcoming)
 
 * [PLT-4665] Update Azure upgrade procedure
 * [PLT-4444] Fix cloud-provisioner stack vulnerabilities
