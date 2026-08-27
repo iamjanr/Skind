@@ -105,7 +105,7 @@ common_charts = {
         "repo": "https://kubernetes.github.io/autoscaler"
     },
     "cluster-operator": {
-        "version": "0.7.0",
+        "version": "0.7.1",
         "namespace": "kube-system",
         "repo": ""
     },
@@ -1351,8 +1351,9 @@ def upgrade_chart(chart_name, chart_data):
             update_cluster_operator_image_tag_value(default_values_file, cluster_operator_version)
         elif release_name == "tigera-operator":
             update_tigera_operator_image_tag_value(default_values_file)
-        elif release_name == "cluster-autoscaler" and provider == "aws":
-            update_cluster_autoscaler_image_tag_value(default_values_file)
+        # elif release_name == "cluster-autoscaler" and provider == "aws":
+        #     # PLT-4665: pin fix9693 desactivado temporalmente — usando versión DEPENDENCIES (9.57.0/v1.35.0)
+        #     update_cluster_autoscaler_image_tag_value(default_values_file)
         elif release_name == "cloud-provider-azure" and provider == "azure":
             update_cloud_provider_azure_image_tag_value(default_values_file)
 
