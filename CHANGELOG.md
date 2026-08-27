@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## 0.9.0 (upcoming)
 
+* [PLT-4665] Validate and harden `upgrade-provisioner.py` for the Azure VMs (unmanaged) `k8s_version` upgrade path: step the control plane one minor at a time (`--node-image-map`), real convergence waits instead of blind sleeps, pre-flight cluster health checks with controlled recovery, and removal/restoration of capsule's `nodes` webhook entry around control-plane version bumps (blocks a new CP Machine's `kubeadm join`, same root cause as PLT-3295)
 * [PLT-4444] Fix cloud-provisioner stack vulnerabilities
 * [PLT-4265] Auto-fix stale `ENIConfig` security groups in `upgrade-provisioner.py` pre-flight checks (PLT-4509 regression on clusters upgraded from before the fix); add `--restore` to `ecr_pull_through.py`; replace `migrate-workers-to-machinepool.py` with the simpler, read-only `activate-capa-machinepool-features.py`
 

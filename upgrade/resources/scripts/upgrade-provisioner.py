@@ -10,7 +10,7 @@
 #   - GKE                                                    #
 ##############################################################
 
-__version__ = "0.9.0"
+__version__ = "0.9.1"
 
 import argparse
 import os
@@ -33,17 +33,12 @@ from urllib.parse import urlparse
 # Force line buffering so log lines stay in execution order (e.g. when piped to a file).
 sys.stdout.reconfigure(line_buffering=True)
 
-# NOTE: 0.9.0 dropped the legacy "0.17.0-0.X" kind-fork-prefixed scheme (VERSION file
-# on stratio/master is "0.9.0-SNAPSHOT", no prefix; last real release under the old
-# scheme was 0.17.0-0.8.5, no 0.17.0-0.9.X tag exists).
-CLOUD_PROVISIONER = "0.9.0"
-# Target k8s minor for cloud-provisioner 0.9.0 (see CHANGELOG.md PLT-4247). Must be one
-# of the minors accepted by the KeosCluster webhook (keoscluster_webhook.go:61,
-# k8sVersionSupported) — bare "major.minor", no leading "v" and no patch digit; the
-# patch digit used when patching the CR is always ".0" (EKS/GKE ignore it, it's not a
-# real "install this exact point release" version).
+# NOTE: plain semver since 0.9.0, no legacy "0.17.0-0.X" prefix.
+CLOUD_PROVISIONER = "0.9.1"
+# Must match a minor in keoscluster_webhook.go:61 k8sVersionSupported (bare "major.minor", no "v").
+# CR patch digit is always ".0" when patching — EKS/GKE ignore it, not an exact release pin.
 K8S_VERSION = "1.35"
-CLUSTER_OPERATOR = "0.7.0-PLT-4665.5"
+CLUSTER_OPERATOR = "0.7.1"
 
 # Flux's own default (5m) is too short for a DaemonSet rollout (maxUnavailable=1) — a
 # fixed value doesn't scale with node count either (verified live 2026-08-25), so
@@ -68,9 +63,9 @@ def compute_helm_release_timeout():
 CLUSTER_OPERATOR_UPGRADE_SUPPORT = "0.5.X"
 
 # Cushion after each minor step converges — CP churn can trigger transient
-# leader-election loss in keoscluster-controller-manager mid-step (see Issues/).
+# leader-election loss in keoscluster-controller-manager mid-step.
 STEP_SETTLE_SECONDS = 90
-CLOUD_PROVISIONER_LAST_PREVIOUS_RELEASE = "0.17.0-0.8"
+CLOUD_PROVISIONER_LAST_PREVIOUS_RELEASE = "0.7.X"
 
 CLUSTERCTL = "v1.10.10"
 
@@ -84,15 +79,10 @@ CAPZ = "v1.21.3"
 TIGERA_OPERATOR_CALICOCTL_VERSION = "v3.31.7"
 TIGERA_OPERATOR_CONTROLLER_VERSION = "v1.40.15"
 
-# AWS only: official cluster-autoscaler images (any released version, including the
-# one the "cluster-autoscaler" chart entry below points to via its appVersion) still
-# hit "unknown machine for node" on scale-down for AWSManagedMachinePool (EKS managed
-# nodegroups / MachinePool workers) — CAPA doesn't create Machine objects for managed
-# nodegroups, and clusterapi_nodegroup.go's Machine lookup fails. Fix merged upstream
-# (kubernetes/autoscaler#9693, 2026-07-16) but, as of 2026-08-03, not backported to any
-# released tag. This is a custom build of the fix cherry-picked on top of the last
-# known-good base — replace with an official tagged release once #9693 ships in one.
-CLUSTER_AUTOSCALER_MP_SCALEDOWN_FIX_VERSION = "v1.33.4-fix9693"
+# AWS only: official CA images hit "unknown machine for node" on scale-down for
+# AWSManagedMachinePool (CAPA has no Machine object for managed nodegroups). kubernetes/autoscaler#9693
+# fixes it but isn't backported to any release yet — known, accepted risk pinning DEPENDENCIES' version.
+CLUSTER_AUTOSCALER_MP_SCALEDOWN_FIX_VERSION = "v1.35.0"
 
 # Azure only: cloud-provider-azure's own per-minor image table can reference an
 # unpublished CCM tag (found live 2026-08-20: k8s 1.32 -> v1.32.16, missing everywhere).
@@ -134,11 +124,6 @@ common_charts = {
 
 aws_eks_charts = {
     "aws-load-balancer-controller": {
-        # Chart versioning converged with the image appVersion starting at v3.0.0
-        # (aws/eks-charts commit c7625428: chart 3.4.0 == appVersion v3.4.0). Before
-        # that, chart major was image major - 1 (commit 7b027f2e: chart 1.14.1 ==
-        # appVersion v2.14.1) — "3.4.0" here matches DEPENDENCIES' v3.4.0 image, not
-        # the old "1.14.1" which pointed at the stale v2.14.1.
         "version": "3.4.0",
         "namespace": "kube-system",
         "repo": "https://aws.github.io/eks-charts"
@@ -591,16 +576,7 @@ def get_keos_cluster_cluster_config():
 
 
 def preflight_cluster_health_checks(keos_cluster, cluster_name, provider):
-    '''Verify the cluster is healthy enough to run an upgrade safely.
-
-    Runs right after fetching KeosCluster/ClusterConfig, before anything mutating
-    (chart upgrades, clusterctl upgrade apply). Motivated by a real incident during
-    PLT-4265 live testing (2026-08-11): running this script against an already
-    unhealthy cluster (a Machine stuck draining, capi/capa below their HA replica
-    count) compounded into a worse outage instead of a clean upgrade. Best-effort:
-    failures to query a given resource are treated as "skip that check", not as a
-    blocking problem, so a partial RBAC gap doesn't itself abort the upgrade.
-    '''
+    '''Verify the cluster is healthy before any mutating step — best-effort, skips checks it can't query.'''
     print("[INFO] Running pre-flight cluster health checks:")
     problems = []
 
@@ -674,15 +650,9 @@ def preflight_cluster_health_checks(keos_cluster, cluster_name, provider):
         if paused:
             print(f"    [INFO] Paused MachineDeployments (template changes won't roll out until unpaused): {', '.join(paused)}")
 
-    # 6. Stale ENIConfig security group (pods_cidr custom networking, PLT-4509 legacy).
-    #    cloud-provisioner < 0.9.0-m.5 wrote ENIConfig objects with a hardcoded lookup of the
-    #    VPC's literal "default" security group instead of the real cluster one (removed in
-    #    Skind commit 5010a9de). MachineDeployment nodes never show the symptom because CAPA's
-    #    AWSMachine reconciler (ensureSecurityGroups/UpdateInstanceSecurityGroups) self-heals
-    #    the SG of every ENI on each reconcile — AWSManagedMachinePool has no equivalent, so a
-    #    MachinePool added after this upgrade would inherit the stale SG and lose connectivity.
-    #    Self-corrects here, not a blocking problem — only the ENIConfig is touched, never a
-    #    live ENI (no cluster upgrading from < 0.9.0-m.5 can have a MachinePool yet).
+    # 6. Stale ENIConfig security group (PLT-4509 legacy, fixed in Skind commit 5010a9de).
+    #    MachineDeployment nodes self-heal via CAPA's ensureSecurityGroups; MachinePool has no
+    #    equivalent, so a new one would inherit the stale SG. Fixes the object here (non-blocking).
     if provider == "aws" and get_pods_cidr(keos_cluster):
         real_sg, _ = run_command(
             f"aws eks describe-cluster --name {cluster_name} "
@@ -709,7 +679,7 @@ def preflight_cluster_health_checks(keos_cluster, cluster_name, provider):
                         )
 
     # 7. Missing kubeadm RBAC binding for the apiserver's kubelet client (Azure VMs only, kubeadm-based
-    #    CP) — see Issues/rbac-gap-kubeadm-apiserver-kubelet-client-binding.md. Self-corrects, not blocking.
+    #    CP). Self-corrects, not blocking.
     if provider == "azure":
         binding_out, _ = run_command(
             f"{kubectl} get clusterrolebinding kubeadm:apiserver-kubelet-client -o name", allow_errors=True
@@ -897,7 +867,7 @@ def get_pods_cidr(keos_cluster):
 
 def cp_global_network_policy(action, keos_cluster, backup_dir, dry_run):
     '''Widen/restore the Calico allow-all-traffic-from-control-plane GNP around a CP
-    version bump (Azure) — ported from Skind 0.17.0-0.7.5, see Issues/cp-global-network-policy-gap.md.'''
+    version bump (Azure) — ported from Skind 0.17.0-0.7.5.'''
 
     check_cmd = f"{kubectl} get GlobalNetworkPolicy allow-all-traffic-from-control-plane"
     _, err = run_command(check_cmd, allow_errors=True)
@@ -970,7 +940,7 @@ spec:
         print("OK")
 
 def capsule_nodes_webhook(action, backup_dir, dry_run):
-    '''Remove/restore capsule's nodes webhook entry — can block a new CP Machine's join (PLT-3295), see Issues/capsule-nodes-webhook-blocks-cp-join.md.'''
+    '''Remove/restore capsule's nodes webhook entry — can block a new CP Machine's join (PLT-3295).'''
 
     webhook_config = "capsule-validating-webhook-configuration"
     raw, err = run_command(f"{kubectl} get validatingwebhookconfigurations {webhook_config} -o json", allow_errors=True)
@@ -1092,15 +1062,9 @@ def update_cluster_operator_image_tag_value(values_file, cluster_operator_versio
         print(f"An error occurred: {e}")
 
 def update_cluster_autoscaler_image_tag_value(values_file):
-    '''Pin cluster-autoscaler to the MachinePool scale-down fix build (AWS only, see
-    CLUSTER_AUTOSCALER_MP_SCALEDOWN_FIX_VERSION above for why).
-
-    This custom build is hosted directly at "{registry}/autoscaling/cluster-autoscaler",
-    never behind the k8s.io ECR pull-through cache — unlike the official image. When
-    ECR pull-through is enabled, create_default_values() already rewrote the repository
-    to "{registry}/k8s/autoscaling/cluster-autoscaler" for the official image, so that
-    substitution must be undone here or the fix9693 tag ends up on a nonexistent
-    repository path (found live 2026-08-12 on eks-4265-hprod-1: ErrImagePull).'''
+    '''Pin cluster-autoscaler to the MP scale-down fix build (AWS only). This custom image lives
+    at "{registry}/autoscaling/...", never behind the k8s.io ECR pull-through cache like the
+    official one — must undo create_default_values()'s rewrite or the tag hits a dead path (verified live).'''
 
     try:
         with open(values_file, 'r') as file:
@@ -1146,13 +1110,9 @@ def update_cloud_provider_azure_image_tag_value(values_file):
         print(f"An error occurred: {e}")
 
 def update_tigera_operator_image_tag_value(values_file):
-    '''Update tigera-operator calicoctl and controller image tag values.
-
-    Both overrides currently match the tigera-operator@{TIGERA chart version}
-    chart's own defaults exactly (verified live via `helm pull`) — kept as explicit
-    pins rather than relying on the chart's defaults, so a future chart version bump
-    can't silently drift the controller/calicoctl version without us noticing (same
-    intent as the other per-component version constants in this script).'''
+    '''Update tigera-operator calicoctl/controller image tags. Currently match the chart's
+    own defaults exactly (verified live via `helm pull`) — kept as explicit pins so a future
+    chart bump can't silently drift the version without us noticing.'''
 
     try:
         with open(values_file, 'r') as file:
@@ -1512,26 +1472,16 @@ def print_planned_changes(charts, provider):
     return chart_current_versions, provider_current_versions
 
 def upgrade_charts(charts, chart_current_versions=None):
-    '''Update the charts. chart_current_versions (from print_planned_changes) lets us
-    skip a chart entirely when it's already at the target version — Flux's HelmRelease
-    reconciliation is idempotent at the Helm-action level (verified live: re-running
-    against an unchanged chart never creates a new Helm release revision), so this is a
-    log-clarity improvement, not a correctness fix, EXCEPT for the charts below.'''
+    '''Update the charts, skipping ones already at target version (Flux's HelmRelease
+    reconciliation is idempotent — verified live, re-running an unchanged chart creates no new revision).'''
 
     chart_current_versions = chart_current_versions or {}
-    # These charts carry a values-level image tag override (cluster-autoscaler's
-    # temporary MP scale-down fix build; tigera-operator's calicoctl/controller pins)
-    # that is independent of the Helm CHART version compared above — skipping
-    # upgrade_chart() here would also skip re-applying that override, silently
-    # reverting to the chart's own (possibly wrong/outdated) default values on any
-    # run where the chart version already matches the target. Never skip these.
+    # cluster-autoscaler/tigera-operator carry a values-level image tag override independent of
+    # the chart version — skipping them would also skip re-applying that override. Never skip these.
     never_skip = {"cluster-autoscaler", "tigera-operator"}
     if is_ecr_pull_through_enabled(keos_cluster):
-        # ECR pull-through cache rewrites each chart's image repository path
-        # inside create_default_values() (called from upgrade_chart() below).
-        # A chart already at its target version would otherwise be SKIPped
-        # here and keep its pre-pull-through image path forever — never skip
-        # any chart while pull-through is active, so every path gets checked.
+        # create_default_values() rewrites image paths for pull-through — an already-matching
+        # chart would otherwise SKIP and keep its pre-pull-through path forever.
         never_skip = set(charts.keys())
     try:
         print(f"[INFO] Updating charts versions:")
@@ -1917,17 +1867,9 @@ def patch_clusterctl_images(registry_url):
     print("OK")
 
 def upgrade_cluster_api_providers(provider, provider_current_versions=None):
-    '''Upgrade Cluster API core and infrastructure providers using clusterctl.
-
-    clusterctl upgrade apply unconditionally scales down and recreates the Deployment of
-    every provider passed via --core/--infrastructure/--bootstrap/--control-plane, even
-    when the requested version already matches what's installed — verified in
-    cluster-api/cmd/clusterctl/client/cluster/upgrader.go: createCustomPlan() never
-    compares Version vs NextVersion, and doUpgrade() only skips an item when
-    NextVersion=="", which never happens for an explicit CLI version. Skip the whole
-    call when every relevant provider is already at its target version, to avoid that
-    unnecessary scale-down/recreate churn (the reason restore_capi_capx_ha_replicas()
-    exists in the first place).'''
+    '''Upgrade CAPI core/infra providers via clusterctl. clusterctl always scales down and
+    recreates each provider's Deployment even if already at target version (upgrader.go
+    doUpgrade() only skips on NextVersion==""); skip the whole call when unneeded to avoid that churn.'''
 
     provider_current_versions = provider_current_versions or {}
 
@@ -1980,20 +1922,9 @@ def upgrade_cluster_api_providers(provider, provider_current_versions=None):
     print("OK")
 
 def restore_capi_capx_ha_replicas(provider):
-    '''Re-scale CAPI/CAPX controller Deployments to their HA replica count.
-
-    clusterctl upgrade apply deletes and reinstalls the Deployment of any provider
-    whose version actually changed (cmd/clusterctl/client/cluster/upgrader.go:441-492,
-    doUpgrade), using the fresh component manifest for the target version — which
-    ships with "replicas: 1" (config/manager/manager.yaml in both cluster-api and
-    cluster-api-provider-aws upstream). cloud-provisioner's own `create cluster` flow
-    scales these to 2 for HA (Skind provider.go:1207 installCAPXWorker, :1275
-    configCAPIWorker) but no upgrade path re-applies that scaling — so an upgrade can
-    silently drop capi/capX back to a single replica, which combined with their
-    PodDisruptionBudget (minAvailable: 1, disruptionsAllowed: 0 at replicas=1) can
-    deadlock draining the node that hosts them. Idempotent: scaling an already-2
-    Deployment to 2 is a no-op.
-    '''
+    '''Re-scale CAPI/CAPX controller Deployments to 2 (HA). clusterctl reinstalls upgraded
+    providers with the upstream manifest's "replicas: 1" — no upgrade path re-applies the
+    HA scaling `create cluster` sets, which combined with their PDB (minAvailable:1) can deadlock draining. Idempotent.'''
     print("[INFO] Restoring CAPI/CAPX HA replicas:", end=" ", flush=True)
 
     deployments = [("capi-system", "capi-controller-manager")]
@@ -2043,10 +1974,8 @@ def bump_k8s_version(keos_cluster, cluster_name, target_minor, start_from_k8s_ve
                     wait_for_capi_md_convergence(cluster_name, wn["name"], current_version)
         return False
     if current_minor > target_minor_tuple:
-        # A plain Exception, not sys.exit(): this runs inside the critical section's
-        # try/except (disable_keoscluster_webhooks() already in effect) — SystemExit is
-        # not an Exception subclass and would skip the controlled-recovery except block,
-        # leaving the cluster with webhooks disabled and the controller stopped.
+        # Plain Exception, not sys.exit(): SystemExit isn't an Exception subclass and would
+        # skip the critical section's controlled-recovery except block (webhooks stay disabled).
         raise Exception(f"Cluster k8s_version ({current_version}) is newer than the requested target (v{target_minor}.0) — downgrade is not supported")
 
     target_version = f"v{target_minor}.0"
@@ -2094,7 +2023,7 @@ def bump_k8s_version(keos_cluster, cluster_name, target_minor, start_from_k8s_ve
 
         # Resuming after an interrupted run: KeosCluster.spec.k8s_version may already say
         # the current step, but that doesn't mean it converged — verify for real before
-        # stepping any further, see Issues/bump-resume-skips-convergence-check.md.
+        # stepping any further.
         wait_for_capi_kcp_version(cluster_name, f"v{major}.{minor}.0")
 
         cp_global_network_policy("patch", keos_cluster, backup_dir, dry_run)
@@ -2150,7 +2079,7 @@ def bump_k8s_version(keos_cluster, cluster_name, target_minor, start_from_k8s_ve
 
 def verify_control_plane_patch_propagated(cluster_name, target_minor, timeout_seconds=120, poll_interval=10):
     '''Verify the k8s_version bump reached AWSManagedControlPlane before the long
-    AWS-side wait — see Issues/ (PLT-4265) for the annotation-resync gap this guards.'''
+    AWS-side wait — guards against the PLT-4265 annotation-resync gap.'''
 
     target_version = f"v{target_minor}.0"
     print(f"[INFO] Verifying cluster-operator propagated the bump to AWSManagedControlPlane (timeout {timeout_seconds}s):", end=" ", flush=True)
@@ -2175,21 +2104,9 @@ def verify_control_plane_patch_propagated(cluster_name, target_minor, timeout_se
     )
 
 def wait_for_k8s_version_bump(cluster_name, provider, target_minor, timeout_minutes=90):
-    '''Wait for a k8s_version bump initiated by bump_k8s_version() to fully land.
-
-    KeosCluster.status.ready is NOT a reliable completion signal on its own for a
-    multi-minor jump: CAPA advances the real EKS control plane one minor at a time
-    internally, and status.ready can read back True in the brief steady window between
-    two internal minor steps, before the target minor is actually reached (observed
-    live 2026-08-10). For AWS, poll the real EKS control plane version directly via
-    `aws eks describe-cluster` instead of trusting a single ready=true reading.
-
-    Azure: the CP already converged step by step inside bump_k8s_version() via
-    wait_for_capi_kcp_version(), so this only needs to confirm the target_minor itself —
-    reuse that same real-convergence check instead of the generic ready==true wait.
-
-    GCP still uses the generic KeosCluster.status.ready wait below — not verified against
-    a real bump on that provider yet (see Tasks/PLT-4265/PLAN.md).'''
+    '''Wait for a k8s_version bump to fully land. AWS: status.ready can read True transiently
+    between CAPA's internal minor steps (observed live), so poll `aws eks describe-cluster`
+    directly instead. Azure reuses bump_k8s_version()'s own convergence check; GCP still uses the generic ready wait (unverified live).'''
 
     if provider == "aws":
         verify_control_plane_patch_propagated(cluster_name, target_minor)
@@ -2297,8 +2214,7 @@ def wait_for_capi_md_convergence(cluster_name, wn_name, target_version, timeout_
     raise Exception(f"Timed out after {timeout_minutes}m waiting for worker nodes ({wn_name}) to reach {target_version}")
 
 def wait_for_capi_kcp_version(cluster_name, target_version, timeout_minutes=90):
-    '''Wait for the real CP rollout to converge on target_version, not just spec.version —
-    see Issues/kcp-convergence-wait-too-weak.md.'''
+    '''Wait for the real CP rollout to converge on target_version, not just spec.version.'''
 
     kcp_name = cluster_name + "-control-plane"
     cp_namespace = "cluster-" + cluster_name
@@ -2628,10 +2544,8 @@ if __name__ == '__main__':
     try:
         context_cmd = f"kubectl --kubeconfig {kubeconfig} config current-context"
         current_context = subprocess.check_output(context_cmd, shell=True, text=True, stderr=subprocess.DEVNULL).strip()
-        # Try to extract cluster name from context (format varies by provider)
-        # For EKS: usually contains cluster name
-        # For AKS: format is typically clustername
-        # For GKE: format is gke_project_zone_clustername
+        # Extract cluster name from context — format varies by provider (EKS/AKS: contains it
+        # directly; GKE: gke_project_zone_clustername).
         if provider == "gcp" and "gke_" in current_context:
             cluster_name_guess = current_context.split("_")[-1]
         elif provider == "aws" and "@" in current_context:
