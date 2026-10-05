@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## 0.10.0 (upcoming)
 
+* [PLT-4935] Add `docs/bastion-vms/`: how to create and manage the per-provider deployment VMs (EKS, Azure, GKE) used to run `create cluster` off the laptop, with their scripts — VM lifecycle, per-person SSH access, persistent `/deployments` volume, asdf tool versions and after-hours auto-stop that skips running bootstraps (Azure deallocates)
 * [PLT-4852] New `upgrade-providers.py` (upgrade image): moves a 0.9 cluster from Cluster API v1.10.10 to v1.13.6 (`v1beta2`) without changing its Kubernetes version — core and kubeadm providers, CAPA v2.13.0 on EKS, the rebased CAPG fork on GKE, CAPZ v1.26.1 on Azure VMs (one step from v1.21.3, labelling the ASO CRDs first), then the `v1beta2` cluster-operator; backups, dry-run, content diff before/after and controlled recovery
 * [PLT-4852] Install Cluster API v1.13.6, CAPA v2.13.0 and CAPZ v1.26.1 (bundled ASO v2.18.0, `clusterctl` v1.13.6); the worker `MachineHealthCheck` is written as `cluster.x-k8s.io/v1beta2`
 * [PLT-4852] GKE: install the rebased CAPG fork `1.13.1-0.1.0-M1`; `upgrade-providers.py` targets it (its manifests are now in the upgrade image), records it in the `ClusterConfig` and defaults to cluster-operator `0.8.0-m.1`
