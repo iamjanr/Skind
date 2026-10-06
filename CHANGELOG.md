@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+* [PLT-4977] Update Go dependencies (minor/patch): `aws-sdk-go-v2` v1.19.0 → v1.47.1 (`config` v1.33.6, `service/ec2` v1.337.0, `service/ecr` v1.66.1), Azure SDK `azcore` v1.17.0 → v1.23.2 / `azidentity` v1.8.2 → v1.13.1, `google.golang.org/api` v0.264.0 → v0.299.0, `containers/image/v5` v5.36.2, `cobra` v1.10.2 and the rest of the module graph; `shellescape` moves to its new module path `al.essio.dev/pkg/shellescape` v1.6.1
+
 ## 0.10.0 (upcoming)
 
 * [PLT-4935] Add `docs/bastion-vms/`: how to create and manage the per-provider deployment VMs (EKS, Azure, GKE) used to run `create cluster` off the laptop, with their scripts — VM lifecycle, per-person SSH access, persistent `/deployments` volume, asdf tool versions and after-hours auto-stop that skips running bootstraps (Azure deallocates)
