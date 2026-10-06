@@ -1,0 +1,47 @@
+version: 2
+updates:
+  # ===== master =====
+  - package-ecosystem: "gomod"
+    directory: "/"
+    target-branch: "master"
+    rebase-strategy: "auto"
+    labels:
+      - "master"
+      - "go"
+      - "dependencies"
+      - "skip doPushDockerECR"
+      - "skip doDeploy"
+    schedule:
+      interval: "daily"
+      time: "06:30"
+    cooldown:
+      default-days: 7
+      semver-patch-days: 1
+    allow:
+      - dependency-type: "direct"
+      - dependency-type: "indirect"
+    groups:
+      gomod-others-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+        exclude-patterns:
+          - "go"
+          - "sigs.k8s.io/*"
+          - "k8s.io/*"
+      gomod-go-k8s-patch:
+        update-types:
+          - "patch"
+        patterns:
+          - "go"
+          - "sigs.k8s.io/*"
+          - "k8s.io/*"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "go"
+        update-types: ["version-update:semver-major","version-update:semver-minor"]
+      - dependency-name: "sigs.k8s.io/*"
+        update-types: ["version-update:semver-major","version-update:semver-minor"]
+      - dependency-name: "k8s.io/*"
+        update-types: ["version-update:semver-major","version-update:semver-minor"]
