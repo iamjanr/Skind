@@ -1,0 +1,82 @@
+name: Dependabot auto-merge
+
+# Activa el auto-merge nativo de GitHub en las PRs de Dependabot. No compila ni
+# valida nada: a partir de aqui GitHub espera a los required status checks que
+# publica Jenkins y mergea cuando todos estan en verde.
+#
+# Como la rama exige estar al dia con la base y Dependabot solo rebasea si hay
+# conflictos, al mergearse una PR de Dependabot se pide el rebase de la
+# siguiente en BEHIND. Asi Jenkins construye de una en una:
+#   merge -> rebase de la siguiente -> Jenkins -> auto-merge -> merge ...
+#
+# Requiere en el repositorio:
+#   - Settings > General > Allow auto-merge
+#   - Proteccion de rama en master y branch-x.y con los checks de Jenkins como
+#     required (sin ellos no hay nada que esperar y el paso falla).
+#   - DEPENDABOT_GH_TOKEN_STRATIO como secreto de Dependabot y de Actions: el
+#     merge no lo hace Dependabot, asi que el evento "closed" solo ve los de
+#     Actions.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    if: github.actor == 'dependabot[bot]' && github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch Dependabot metadata
+        id: meta
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: ${{ secrets.DEPENDABOT_GH_TOKEN_STRATIO }}
+
+      # Los majors ya estan excluidos en dependabot.yml; esta condicion es la red
+      # de seguridad por si esos "ignore" se relajan en el futuro.
+      - name: Embrace auto-merge (squash)
+        if: steps.meta.outputs.update-type != 'version-update:semver-major'
+        run: gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.DEPENDABOT_GH_TOKEN_STRATIO }}
+
+  rebase-next:
+    if: github.event.pull_request.merged && github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      # Se comenta con el token de un usuario con escritura: Dependabot ignora
+      # los comandos de github-actions[bot].
+      - name: Rebase next Dependabot PR
+        env:
+          GH_TOKEN: ${{ secrets.DEPENDABOT_GH_TOKEN_STRATIO }}
+          GH_REPO: ${{ github.repository }}
+          BASE: ${{ github.event.pull_request.base.ref }}
+        run: |
+          # Justo despues del merge GitHub aun esta recalculando el estado de las
+          # demas PRs (UNKNOWN); se reintenta hasta que lo tenga.
+          for i in 1 2 3 4 5 6; do
+            prs=$(gh pr list --base "$BASE" --author app/dependabot --state open --limit 30 \
+              --json number,createdAt,mergeStateStatus,autoMergeRequest,statusCheckRollup)
+            jq -e 'any(.[]; .mergeStateStatus == "UNKNOWN")' <<<"$prs" >/dev/null || break
+            sleep 10
+          done
+
+          # Si hay una PR al dia pasando Jenkins no se hace nada; si no, se
+          # rebasea la mas antigua en BEHIND.
+          next=$(jq -r '
+            map(select(.autoMergeRequest != null)
+              | .jenkins = ([.statusCheckRollup[] | select(.name == "Jenkins") | .status] | last // "PENDING"))
+            | if any(.mergeStateStatus != "BEHIND" and .jenkins != "COMPLETED") then empty
+              else map(select(.mergeStateStatus == "BEHIND")) | sort_by(.createdAt) | first | .number // empty end' <<<"$prs")
+
+          if [ -n "$next" ]; then
+            echo "Rebase de #$next"
+            gh pr comment "$next" --body "@dependabot rebase"
+          else
+            echo "Nada que rebasear en $BASE"
+          fi
